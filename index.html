@@ -182,46 +182,51 @@ canvas{max-width:100%}
   <!-- TECHNIQUES -->
 <section id="techniques" class="page">
   <h2>Techniques</h2>
-  <div class="grids">
 
-<!-- Resonant (6 bpm) -->
-<h3>Resonant Breathing</h3>
-<p class="small">~6 breaths/min · steady rhythm</p>
-<div id="ringRes" class="ring"></div>
-<div id="statusRes" class="small muted">Press Start</div>
-<div style="display:flex;gap:8px;margin-top:4px">
-  <button class="btn primary" data-tech="res">Start</button>
-  <button class="btn" data-stop>Stop</button>
-  <button class="btn" data-reset>Reset</button>
-</div>
+  <div class="grid">
+    <!-- Resonant (6 bpm) -->
+    <div class="card">
+      <h3>Resonant Breathing</h3>
+      <p class="small">≈6 breaths/min • steady rhythm</p>
+      <div id="ringRes" class="ring"></div>
+      <div id="statusRes" class="small muted">Press Start</div>
+      <div class="controls">
+        <button class="btn primary" data-tech="res">Start</button>
+        <button class="btn" data-tech="res" data-stop>Stop</button>
+        <button class="btn" data-tech="res" data-reset>Reset</button>
+      </div>
+      <div class="small progress">Minutes: <span id="mins-res">0</span> • Sessions: <span id="sessions-res">0</span></div>
+    </div>
 
-<!-- 3-6-7 -->
-<h3>3-6-7 Breathing</h3>
-<p class="small">In 3s · Hold 6s · Out 7s</p>
-<div id="ring367" class="ring"></div>
-<div id="status367" class="small muted">Press Start</div>
-<div style="display:flex;gap:8px;margin-top:4px">
-  <button class="btn primary" data-tech="t367">Start</button>
-  <button class="btn" data-stop>Stop</button>
-  <button class="btn" data-reset>Reset</button>
-</div>
+    <!-- 3-6-7 -->
+    <div class="card">
+      <h3>3-6-7 Breathing</h3>
+      <p class="small">In 3s • Hold 6s • Out 7s</p>
+      <div id="ring367" class="ring"></div>
+      <div id="status367" class="small muted">Press Start</div>
+      <div class="controls">
+        <button class="btn primary" data-tech="t367">Start</button>
+        <button class="btn" data-tech="t367" data-stop>Stop</button>
+        <button class="btn" data-tech="t367" data-reset>Reset</button>
+      </div>
+      <div class="small progress">Minutes: <span id="mins-367">0</span> • Sessions: <span id="sessions-367">0</span></div>
+    </div>
 
-<!-- Box -->
-<h3>Box Breathing</h3>
-<p class="small">In 4s · Hold 4s · Out 4s · Hold 4s</p>
-<div id="ringBox" class="ring"></div>
-<div id="statusBox" class="small muted">Press Start</div>
-<div style="display:flex;gap:8px;margin-top:4px">
-  <button class="btn primary" data-tech="box">Start</button>
-  <button class="btn" data-stop>Stop</button>
-  <button class="btn" data-reset>Reset</button>
-</div>
-
-<!-- Session Progress (these IDs must exist) -->
-<div style="margin-top:12px;display:flex;align-items:center;justify-content:space-between">
-  <div><b>Session Progress</b></div>
-  <div class="small">Minutes this week: <span id="mins">0</span> · Sessions: <span id="sessions">0</span></div>
-</div>
+    <!-- Box -->
+    <div class="card">
+      <h3>Box Breathing</h3>
+      <p class="small">In 4s • Hold 4s • Out 4s • Hold 4s</p>
+      <div id="ringBox" class="ring"></div>
+      <div id="statusBox" class="small muted">Press Start</div>
+      <div class="controls">
+        <button class="btn primary" data-tech="box">Start</button>
+        <button class="btn" data-tech="box" data-stop>Stop</button>
+        <button class="btn" data-tech="box" data-reset>Reset</button>
+      </div>
+      <div class="small progress">Minutes: <span id="mins-box">0</span> • Sessions: <span id="sessions-box">0</span></div>
+    </div>
+  </div>
+</section>
 
   <!-- DIARY -->
   <section id="diary" class="page">
@@ -460,135 +465,101 @@ canvas{max-width:100%}
 })();
 
 // ---------- Techniques (timers + progress) ----------
+
 (function () {
-  // Elements
-  const rings = {
-    res:   document.getElementById('ringRes'),
-    t367:  document.getElementById('ring367'),
-    box:   document.getElementById('ringBox'),
-  };
-  const statusEls = {
-    res:   document.getElementById('statusRes'),
-    t367:  document.getElementById('status367'),
-    box:   document.getElementById('statusBox'),
-  };
-  const minsEl = document.getElementById('mins');
-  const sessEl = document.getElementById('sessions');
-
-  // State
-  let active = null;           // 'res' | 't367' | 'box' | null
-  let timer = null;            // current timeout
-  let startTs = 0;             // ms for session length
-
-  // Utilities
-  const clearTimer = () => { if (timer) { clearTimeout(timer); timer = null; } };
-  const setStatus = (tech, text) => { if (statusEls[tech]) statusEls[tech].textContent = text; };
-  const setRing = (tech, phase) => {
-    // Optional visual cue — add a CSS class if you have styles for it
-    const el = rings[tech]; if (!el) return;
-    el.dataset.phase = phase; // e.g., 'in' | 'hold' | 'out'
+  // --- configuration for the three techniques ---
+  const CFG = {
+    res:  { seq:[5000,5000],               labels:['In','Out'],                  ring:'ringRes',  status:'statusRes',  mins:'mins-res',  sess:'sessions-res' },
+    t367: { seq:[3000,6000,7000],          labels:['In 3s','Hold 6s','Out 7s'], ring:'ring367',  status:'status367',  mins:'mins-367', sess:'sessions-367' },
+    box:  { seq:[4000,4000,4000,4000],     labels:['In','Hold','Out','Hold'],   ring:'ringBox',  status:'statusBox',  mins:'mins-box', sess:'sessions-box' }
   };
 
-  function addProgress(elapsedMs) {
-    const addMin = Math.round(elapsedMs / 60000); // whole minutes
-    const curM = parseInt(minsEl?.textContent || '0', 10) || 0;
-    const curS = parseInt(sessEl?.textContent || '0', 10) || 0;
-    const newM = curM + addMin;
-    const newS = curS + 1;
-    if (minsEl) minsEl.textContent = String(newM);
-    if (sessEl) sessEl.textContent = String(newS);
-    // also stash locally so it survives reloads
-    try { localStorage.setItem('mindcast_progress', JSON.stringify({m:newM,s:newS})); } catch {}
+  let timer = null;
+  let startedAt = null;
+  let active = null;
+
+  // --- tiny helpers for persistent counters ---
+  const load = (k) => { try { return JSON.parse(localStorage.getItem(k) || '0'); } catch { return 0; } };
+  const save = (k,v) => localStorage.setItem(k, JSON.stringify(v));
+
+  function setStatus(key, text){
+    const el = document.getElementById(CFG[key].status);
+    if (el) el.textContent = text;
   }
 
-  // Restore progress on load
-  try {
-    const saved = JSON.parse(localStorage.getItem('mindcast_progress') || '{}');
-    if (saved.m != null && minsEl) minsEl.textContent = String(saved.m);
-    if (saved.s != null && sessEl) sessEl.textContent = String(saved.s);
-  } catch {}
-
-  // Sequencers (loop until stopped)
-  function loopRes() {
-    if (active !== 'res') return;
-    setStatus('res', 'Inhale'); setRing('res','in');
-    timer = setTimeout(() => {
-      if (active !== 'res') return;
-      setStatus('res', 'Exhale'); setRing('res','out');
-      timer = setTimeout(loopRes, 5000); // 5s in + 5s out = 10s → ~6 bpm
-    }, 5000);
+  function pulseRing(key, pct){
+    const ring = document.getElementById(CFG[key].ring);
+    if (!ring) return;
+    // simple “breathing” pulse (0.95 – 1.05 scale)
+    const scale = 0.95 + 0.10 * Math.abs(Math.sin(pct * Math.PI));
+    ring.style.transform = `scale(${scale.toFixed(3)})`;
   }
 
-  function loop367() {
-    if (active !== 't367') return;
-    setStatus('t367', 'Inhale (3)'); setRing('t367','in');
-    timer = setTimeout(() => {
-      if (active !== 't367') return;
-      setStatus('t367', 'Hold (6)'); setRing('t367','hold');
-      timer = setTimeout(() => {
-        if (active !== 't367') return;
-        setStatus('t367', 'Exhale (7)'); setRing('t367','out');
-        timer = setTimeout(loop367, 7000);
-      }, 6000);
-    }, 3000);
-  }
-
-  function loopBox() {
-    if (active !== 'box') return;
-    setStatus('box', 'Inhale (4)'); setRing('box','in');
-    timer = setTimeout(() => {
-      if (active !== 'box') return;
-      setStatus('box', 'Hold (4)'); setRing('box','hold');
-      timer = setTimeout(() => {
-        if (active !== 'box') return;
-        setStatus('box', 'Exhale (4)'); setRing('box','out');
-        timer = setTimeout(() => {
-          if (active !== 'box') return;
-          setStatus('box', 'Hold (4)'); setRing('box','hold');
-          timer = setTimeout(loopBox, 4000);
-        }, 4000);
-      }, 4000);
-    }, 4000);
-  }
-
-  function start(tech) {
-    // Stop any current session first
-    stop(false);
-    active = tech;
-    startTs = Date.now();
-    if (tech === 'res')  loopRes();
-    if (tech === 't367') loop367();
-    if (tech === 'box')  loopBox();
-  }
-
-  function stop(record = true) {
+  function runStep(i){
     if (!active) return;
-    clearTimer();
-    const elapsed = Date.now() - startTs;
-    if (record && elapsed > 5000) addProgress(elapsed); // only record if >5s
-    // reset statuses
-    setStatus('res','Press Start'); setRing('res','');
-    setStatus('t367','Press Start'); setRing('t367','');
-    setStatus('box','Press Start'); setRing('box','');
+    const c = CFG[active];
+    const dur = c.seq[i];
+    const pct = i / c.seq.length;
+    setStatus(active, c.labels[i]);
+    pulseRing(active, pct);
+    timer = setTimeout(() => runStep((i + 1) % c.seq.length), dur);
+  }
+
+  function start(key){
+    stop(false);                 // stop any previous run but don't record it
+    active = key;
+    startedAt = Date.now();
+    setStatus(key, 'Running…');
+    runStep(0);
+  }
+
+  function stop(record = true){
+    if (timer){ clearTimeout(timer); timer = null; }
+    if (record && active){
+      const elapsedMs = Math.max(0, Date.now() - startedAt);
+      // Record only if > 5s to avoid accidental clicks
+      if (elapsedMs > 5000){
+        const minsKey = `mins-${active}`;
+        const sesKey  = `sessions-${active}`;
+        const totalMins = load(minsKey) + Math.round(elapsedMs / 60000);
+        const totalSes  = load(sesKey)  + 1;
+        save(minsKey, totalMins);
+        save(sesKey,  totalSes);
+        document.getElementById(CFG[active].mins).textContent  = totalMins;
+        document.getElementById(CFG[active].sess).textContent  = totalSes;
+      }
+    }
+    // reset UI
+    ['res','t367','box'].forEach(k => { setStatus(k, 'Press Start'); pulseRing(k, 0); });
     active = null;
   }
 
-  function resetProgress() {
-    stop(false);
-    if (minsEl) minsEl.textContent = '0';
-    if (sessEl) sessEl.textContent = '0';
-    try { localStorage.removeItem('mindcast_progress'); } catch {}
+  function resetProgress(key){
+    save(`mins-${key}`, 0);
+    save(`sessions-${key}`, 0);
+    document.getElementById(CFG[key].mins).textContent = '0';
+    document.getElementById(CFG[key].sess).textContent = '0';
+    setStatus(key, 'Press Start');
+    pulseRing(key, 0);
   }
 
-  // Wire up buttons (they must use data-tech / data-stop / data-reset)
+  // initialize counters from storage on page load
+  ['res','t367','box'].forEach(k => {
+    document.getElementById(CFG[k].mins).textContent = load(`mins-${k}`);
+    document.getElementById(CFG[k].sess).textContent = load(`sessions-${k}`);
+  });
+
+  // single click handler for all three cards
   document.addEventListener('click', (e) => {
-    const b = e.target.closest('button'); if (!b) return;
-    if (b.dataset.tech)  start(b.dataset.tech);
-    if (b.hasAttribute('data-stop'))  stop(true);
-    if (b.hasAttribute('data-reset')) resetProgress();
+    const b = e.target.closest('button');
+    if (!b) return;
+    const tech = b.dataset.tech; // res | t367 | box
+
+    if (b.hasAttribute('data-stop'))       return stop(true);
+    if (b.hasAttribute('data-reset'))      return resetProgress(tech);
+    if (tech)                              return start(tech);
   });
 })();
-
 
 // ---------- Diary ----------
 (function(){
