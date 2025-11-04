@@ -468,129 +468,109 @@ canvas{max-width:100%}
   apply();
 })();
 
-// ---------- Techniques (with visible status) ----------
+// ---------- Techniques (breathing timers) ----------
+(function () {
+  // map of UI elements
+  const refs = {
+    res:   { ring: byId('ringRes'),  status: byId('statusRes')  },
+    t367:  { ring: byId('ring367'),  status: byId('status367')  },
+    box:   { ring: byId('ringBox'),  status: byId('statusBox')  }
+  };
 
-(function(){
+  // sequences (ms) and labels for phases
+  const sequences = {
+    res:  { ms:[2500,2500],                labels:['In', 'Out'] },            // ~6 bpm
+    t367: { ms:[3000,6000,7000],           labels:['In 3s','Hold 6s','Out 7s'] },
+    box:  { ms:[4000,4000,4000,4000],      labels:['In 4s','Hold 4s','Out 4s','Hold 4s'] }
+  };
+
+  // state
   let timer = null;
-  let elapsedSec = 0;
-  let current = '';
-  const startBtns = Array.from(document.querySelectorAll('[data-tech]'));
-  const minsEl = document.getElementById('mins');
-  const sessionsEl = document.getElementById('sessions');
+  let current = null;
+  let idx = 0;
 
-  // Load persisted counts (optional)
-  function loadCounters(){
-    const m = parseInt(localStorage.getItem('mc_mins') || '0', 10);
-    const s = parseInt(localStorage.getItem('mc_sessions') || '0', 10);
-    if(minsEl) minsEl.textContent = m;
-    if(sessionsEl) sessionsEl.textContent = s;
+  // helpers
+  function byId(id){ return document.getElementById(id); }
+  function setStatus(name, text){
+    const el = refs[name].status;
+    if (el) el.textContent = text;
+  }
+  function animate(ring, scaleTo){
+    try {
+      ring.style.transition = 'transform 0.2s ease';
+      ring.style.transform = `scale(${scaleTo})`;
+    } catch {}
+  }
+  function clearAnim(){
+    Object.values(refs).forEach(({ring})=>{
+      if (ring){ ring.style.transform = 'scale(1)'; }
+    });
+  }
+  function enableStarts(disabled){
+    document.querySelectorAll('button[data-tech]').forEach(b => {
+      b.disabled = disabled;
+      b.classList.toggle('running', disabled);
+    });
+  }
+  function stopAll(){
+    if (timer) clearTimeout(timer);
+    timer = null;
+    clearAnim();
+    enableStarts(false);
+    if (current) setStatus(current, 'Stopped');
+    current = null;
+    idx = 0;
   }
 
-  function saveCounters(){
-    if(minsEl) localStorage.setItem('mc_mins', String(parseInt(minsEl.textContent||'0',10)));
-    if(sessionsEl) localStorage.setItem('mc_sessions', String(parseInt(sessionsEl.textContent||'0',10)));
+  // core loop
+  function runStep(name){
+    const seq = sequences[name];
+    const ring = refs[name].ring;
+    const phaseLabel = seq.labels[idx];
+    setStatus(name, phaseLabel);
+    // simple in/out pulse: odd phases shrink a bit
+    const grow = (idx % 2 === 0) ? 1.10 : 0.92;
+    animate(ring, grow);
+    const ms = seq.ms[idx];
+    timer = setTimeout(()=>{
+      // reset ring size before next step
+      animate(ring, 1.0);
+      idx = (idx + 1) % seq.ms.length;
+      if (current === name) runStep(name);
+    }, ms);
   }
 
-  // update any visible status labels if setStatuses exists
-  function updateStatuses(phaseLabel){
-    if(typeof setStatuses === 'function'){
-      setStatuses(current, phaseLabel || '');
-    }
-  }
+  // click handling
+  document.addEventListener('click', (e)=>{
+    const startBtn = e.target.closest('button[data-tech]');
+    const stopBtn  = e.target.closest('button[data-stop]');
 
-  function clearAnimLocal(){
-    // stop timer
-    if(timer){ clearInterval(timer); timer = null; }
-    elapsedSec = 0;
-    current = '';
-    // enable buttons
-    startBtns.forEach(b => { b.disabled = false; b.classList.remove('running'); });
-    // call original clearAnim if present (keeps UI ring reset)
-    if(typeof clearAnim === 'function') clearAnim();
-    updateStatuses('');
-  }
-
-  function startTechnique(techId, btn){
-    clearAnimLocal();                // clear anything running already
-    current = techId;
-    btn.classList.add('running');
-    startBtns.forEach(b => { if(b !== btn) b.disabled = true;});
-    elapsedSec = 0;
-
-    // start interval: tick every second
-    timer = setInterval(()=> {
-      elapsedSec += 1;
-      // update minute counter UI each full minute
-      if(elapsedSec % 60 === 0){
-        if(minsEl){
-          const cur = parseInt(minsEl.textContent||'0',10) + 1;
-          minsEl.textContent = cur;
-          saveCounters();
-        }
-      }
-      // update an on-screen status label (seconds) if you want:
-      updateStatuses(`${Math.floor(elapsedSec/60)}m ${elapsedSec%60}s`);
-      // optional: animate ring quickly by toggling a class (if you want)
-    }, 1000);
-
-    // let other code know we started
-    updateStatuses('Running');
-  }
-
-  function stopTechnique(btn){
-    // stop interval but only increment session if any time passed
-    if(timer) {
-      clearInterval(timer);
-      timer = null;
-      // if some time was tracked, increase session count
-      if(elapsedSec > 0 && sessionsEl){
-        const cur = parseInt(sessionsEl.textContent||'0',10) + 1;
-        sessionsEl.textContent = cur;
-        saveCounters();
-      }
-    }
-    // reset running UI
-    startBtns.forEach(b => { b.disabled = false; });
-    if(btn) btn.classList.remove('running');
-    updateStatuses('Stopped');
-    // call original clearAnim if present to reset ring visuals
-    if(typeof clearAnim === 'function') clearAnim();
-    current = '';
-    elapsedSec = 0;
-  }
-
-  // single click listener for all Start/Stop buttons in the techniques area
-  document.addEventListener('click', (e) => {
-    const b = e.target.closest('button');
-    if(!b) return;
-    // stop button if it has data-stop attribute
-    if(b.dataset.stop !== undefined){
-      stopTechnique(b);
+    if (startBtn){
+      const name = startBtn.dataset.tech;   // 'res' | 't367' | 'box'
+      stopAll();
+      current = name;
+      idx = 0;
+      enableStarts(true);
+      setStatus(name, 'Starting…');
+      runStep(name);
       return;
     }
 
-    const tech = b.dataset.tech; // expected values: 'res', 't367', 'box'
-    if(!tech) return;
-
-    // Start handlers
-    if(tech === 'res'){
-      // optionally call old visual start handler if exists (startRes)
-      if(typeof startRes === 'function'){ startRes(b); }
-      startTechnique(tech, b);
-    } else if(tech === 't367'){
-      if(typeof start367 === 'function'){ start367(b); }
-      startTechnique(tech, b);
-    } else if(tech === 'box'){
-      if(typeof startBox === 'function'){ startBox(b); }
-      startTechnique(tech, b);
+    if (stopBtn){
+      stopAll();
     }
   });
 
-  // initialize UI with stored counters
-  loadCounters();
-
+  // optional: auto-resize ring divs if they exist
+  Object.values(refs).forEach(({ring})=>{
+    if (!ring) return;
+    ring.style.width = '120px';
+    ring.style.height = '120px';
+    ring.style.borderRadius = '60px';
+    ring.style.border = '6px solid rgba(255,255,255,0.25)';
+    ring.style.margin = '12px auto';
+  });
 })();
-
 
 // ---------- Diary ----------
 (function(){
