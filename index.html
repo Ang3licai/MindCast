@@ -62,11 +62,13 @@ canvas{max-width:100%}
 
 /* Make the ring centered and consistent */
 .ring{
-  width: 160px; height: 160px;
-  margin: 12px auto 0 auto;
-  border: 4px solid rgba(76, 210, 200, .75);
-  border-radius: 50%;
+  width:160px; height:160px;
+  margin:12px auto 0;
+  border:4px solid rgba(76,210,200,.75);
+  border-radius:50%;
+  /* smooth in/out and always a defined base */
   transform: scale(1);
+  transition: transform 320ms ease-in-out;
 }
 
 /* --- ring breathing animation --- */
@@ -519,12 +521,17 @@ canvas{max-width:100%}
   }
 
   function pulseRing(key, pct){
+    // pct goes 0..1 for the current step
+    // use a half-sine so it grows then shrinks back to 1
+    // 0 -> 1.00   0.5 -> 1+amp    1 -> 1.00
     const ring = document.getElementById(CFG[key].ring);
     if (!ring) return;
-    // simple “breathing” pulse (0.95 – 1.05 scale)
-    const scale = 0.95 + 0.10 * Math.abs(Math.sin(pct * Math.PI));
-    ring.style.transform = `scale(${scale.toFixed(3)})`;
+
+    const amp = 0.12;                     // how "big" the inhale gets (12%)
+    const scale = 1 + amp * Math.sin(pct * Math.PI);
+    ring.style.transform = `scale(${scale})`;
   }
+
   
   function setRing(tech, phase) {
     const ring = document.getElementById(CFG[tech].ring);
@@ -570,7 +577,11 @@ canvas{max-width:100%}
       }
     }
     // reset UI
-    ['res','t367','box'].forEach(k => { setStatus(k, 'Press Start'); pulseRing(k, 0); });
+    ['res','t367','box'].forEach(k => {
+      setStatus(k,'Press Start');
+      const r = document.getElementById(CFG[k].ring);
+      if (r) r.style.transform = 'scale(1)';
+    });
     active = null;
   }
 
