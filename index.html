@@ -180,37 +180,57 @@ canvas{max-width:100%}
   </section>
 
   <!-- TECHNIQUES -->
-  <section id="techniques" class="page">
-    <h2>Techniques</h2>
-    <div class="grid3">
-      <div class="card" style="text-align:center">
-        <h3>Resonant Breathing</h3><p class="small">~6 breaths/min • steady rhythm</p>
-        <div id="ringRes" class="ring"></div><div id="statusRes" class="small muted">Press Start</div>
-        <div style="display:flex;gap:8px;justify-content:center;margin-top:4px">
-          <button class="btn primary" data-tech="res">Start</button><button class="btn" data-stop>Stop</button>
-        </div>
-        <p class="small" style="margin-top:6px">In 4s · Out 6s</p>
-      </div>
-      <div class="card" style="text-align:center">
-        <h3>3–6–7 Breathing</h3><p class="small">In 3 · Hold 6 · Out 7</p>
-        <div id="ring367" class="ring" style="border-color:rgba(247,141,167,.6)"></div><div id="status367" class="small muted">Press Start</div>
-        <div style="display:flex;gap:8px;justify-content:center;margin-top:4px">
-          <button class="btn primary" data-tech="t367">Start</button><button class="btn" data-stop>Stop</button>
-        </div>
-      </div>
-      <div class="card" style="text-align:center">
-        <h3>Box Breathing</h3><p class="small">In 4 · Hold 4 · Out 4 · Hold 4</p>
-        <div id="ringBox" class="ring" style="border-color:rgba(20,184,166,.3)"></div><div id="statusBox" class="small muted">Press Start</div>
-        <div style="display:flex;gap:8px;justify-content:center;margin-top:4px">
-          <button class="btn primary" data-tech="box">Start</button><button class="btn" data-stop>Stop</button>
-        </div>
+<section id="techniques" class="page">
+  <h2>Techniques</h2>
+  <div class="grids">
+
+    <!-- Resonant Breathing -->
+    <div class="card" style="text-align:center">
+      <h3>Resonant Breathing</h3>
+      <p class="small">≈6 breaths/min • steady rhythm</p>
+      <div id="ringRes" class="ring"></div>
+      <div id="statusRes" class="small muted">Press Start</div>
+      <div style="display:flex;gap:8px;justify-content:center;margin-top:4px;">
+        <button class="btn primary" data-tech="res">Start</button>
+        <button class="btn" data-stop="res">Stop</button>
+        <button class="btn" data-reset="res">Reset</button>
       </div>
     </div>
-    <div class="card" style="margin-top:12px;display:flex;align-items:center;justify-content:space-between;gap:10px">
-      <div><b>Session Progress</b><div class="small">Minutes this week: <span id="mins">0</span> • Sessions: <span id="sessions">0</span></div></div>
-      <button id="resetSess" class="btn">Reset</button>
+
+    <!-- 3-6-7 Breathing -->
+    <div class="card" style="text-align:center">
+      <h3>3-6-7 Breathing</h3>
+      <p class="small">In 3s • Hold 6s • Out 7s</p>
+      <div id="ring367" class="ring"></div>
+      <div id="status367" class="small muted">Press Start</div>
+      <div style="display:flex;gap:8px;justify-content:center;margin-top:4px;">
+        <button class="btn primary" data-tech="367">Start</button>
+        <button class="btn" data-stop="367">Stop</button>
+        <button class="btn" data-reset="367">Reset</button>
+      </div>
     </div>
-  </section>
+
+    <!-- Box Breathing -->
+    <div class="card" style="text-align:center">
+      <h3>Box Breathing</h3>
+      <p class="small">In 4s • Hold 4s • Out 4s • Hold 4s</p>
+      <div id="ringBox" class="ring"></div>
+      <div id="statusBox" class="small muted">Press Start</div>
+      <div style="display:flex;gap:8px;justify-content:center;margin-top:4px;">
+        <button class="btn primary" data-tech="box">Start</button>
+        <button class="btn" data-stop="box">Stop</button>
+        <button class="btn" data-reset="box">Reset</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Session Progress -->
+  <div class="card" style="margin-top:12px;display:flex;align-items:center;justify-content:space-between;">
+    <b>Session Progress</b>
+    <span id="session-status" class="small muted">No session yet</span>
+  </div>
+</section>
+
 
   <!-- DIARY -->
   <section id="diary" class="page">
@@ -449,45 +469,128 @@ canvas{max-width:100%}
 })();
 
 // ---------- Techniques (with visible status) ----------
+
 (function(){
-  let timer=null, current='';
+  let timer = null;
+  let elapsedSec = 0;
+  let current = '';
   const startBtns = Array.from(document.querySelectorAll('[data-tech]'));
-  function setStatuses(name, phase){
-    const map={res:['statusRes','ringRes','Resonant: '], t367:['status367','ring367','3-6-7: '], box:['statusBox','ringBox','Box: ']};
-    ['statusRes','status367','statusBox'].forEach(id=>{ const el=document.getElementById(id); if(el) { el.textContent='Press Start'; el.classList.add('muted'); } });
-    if(name && phase){
-      const [sid, rid, label] = map[name];
-      const el=document.getElementById(sid); if(el){ el.textContent = label + phase; el.classList.remove('muted'); }
+  const minsEl = document.getElementById('mins');
+  const sessionsEl = document.getElementById('sessions');
+
+  // Load persisted counts (optional)
+  function loadCounters(){
+    const m = parseInt(localStorage.getItem('mc_mins') || '0', 10);
+    const s = parseInt(localStorage.getItem('mc_sessions') || '0', 10);
+    if(minsEl) minsEl.textContent = m;
+    if(sessionsEl) sessionsEl.textContent = s;
+  }
+
+  function saveCounters(){
+    if(minsEl) localStorage.setItem('mc_mins', String(parseInt(minsEl.textContent||'0',10)));
+    if(sessionsEl) localStorage.setItem('mc_sessions', String(parseInt(sessionsEl.textContent||'0',10)));
+  }
+
+  // update any visible status labels if setStatuses exists
+  function updateStatuses(phaseLabel){
+    if(typeof setStatuses === 'function'){
+      setStatuses(current, phaseLabel || '');
     }
   }
-  function clearAnim(){
-    if(timer){ clearTimeout(timer); timer=null; }
-    ['ringRes','ring367','ringBox'].forEach(id=>{ const el=document.getElementById(id); if(el) el.style.transform='scale(1)'; });
-    startBtns.forEach(b=>{ b.disabled=false; b.classList.remove('running'); });
-    current=''; setStatuses();
+
+  function clearAnimLocal(){
+    // stop timer
+    if(timer){ clearInterval(timer); timer = null; }
+    elapsedSec = 0;
+    current = '';
+    // enable buttons
+    startBtns.forEach(b => { b.disabled = false; b.classList.remove('running'); });
+    // call original clearAnim if present (keeps UI ring reset)
+    if(typeof clearAnim === 'function') clearAnim();
+    updateStatuses('');
   }
-  function startRes(btn){
-    clearAnim(); current='res'; btn.classList.add('running'); startBtns.forEach(b=>{ if(b!==btn) b.disabled=true; });
-    const el=document.getElementById('ringRes'); let p=0; (function loop(){ p^=1; el.style.transition='transform 6s ease-in-out'; el.style.transform=p?'scale(1.2)':'scale(0.9)'; setStatuses('res', p?'Inhale 6s':'Exhale 6s'); timer=setTimeout(loop,6000); })();
+
+  function startTechnique(techId, btn){
+    clearAnimLocal();                // clear anything running already
+    current = techId;
+    btn.classList.add('running');
+    startBtns.forEach(b => { if(b !== btn) b.disabled = true;});
+    elapsedSec = 0;
+
+    // start interval: tick every second
+    timer = setInterval(()=> {
+      elapsedSec += 1;
+      // update minute counter UI each full minute
+      if(elapsedSec % 60 === 0){
+        if(minsEl){
+          const cur = parseInt(minsEl.textContent||'0',10) + 1;
+          minsEl.textContent = cur;
+          saveCounters();
+        }
+      }
+      // update an on-screen status label (seconds) if you want:
+      updateStatuses(`${Math.floor(elapsedSec/60)}m ${elapsedSec%60}s`);
+      // optional: animate ring quickly by toggling a class (if you want)
+    }, 1000);
+
+    // let other code know we started
+    updateStatuses('Running');
   }
-  function start367(btn){
-    clearAnim(); current='t367'; btn.classList.add('running'); startBtns.forEach(b=>{ if(b!==btn) b.disabled=true; });
-    const el=document.getElementById('ring367'); let s=0; const seq=[3000,6000,7000]; const labels=['In 3s','Hold 6s','Out 7s'];
-    (function loop(){ el.style.transition=`transform ${seq[s]/1000}s ease-in-out`; el.style.transform=(s===0||s===1)?'scale(1.2)':'scale(0.9)'; setStatuses('t367', labels[s]); s=(s+1)%3; timer=setTimeout(loop,seq[s]); })();
+
+  function stopTechnique(btn){
+    // stop interval but only increment session if any time passed
+    if(timer) {
+      clearInterval(timer);
+      timer = null;
+      // if some time was tracked, increase session count
+      if(elapsedSec > 0 && sessionsEl){
+        const cur = parseInt(sessionsEl.textContent||'0',10) + 1;
+        sessionsEl.textContent = cur;
+        saveCounters();
+      }
+    }
+    // reset running UI
+    startBtns.forEach(b => { b.disabled = false; });
+    if(btn) btn.classList.remove('running');
+    updateStatuses('Stopped');
+    // call original clearAnim if present to reset ring visuals
+    if(typeof clearAnim === 'function') clearAnim();
+    current = '';
+    elapsedSec = 0;
   }
-  function startBox(btn){
-    clearAnim(); current='box'; btn.classList.add('running'); startBtns.forEach(b=>{ if(b!==btn) b.disabled=true; });
-    const el=document.getElementById('ringBox'); let s=0; const seq=[4000,4000,4000,4000]; const labels=['In 4s','Hold 4s','Out 4s','Hold 4s'];
-    (function loop(){ el.style.transition=`transform ${seq[s]/1000}s ease-in-out`; el.style.transform=(s===0||s===1)?'scale(1.2)':'scale(0.9)'; setStatuses('box', labels[s]); s=(s+1)%4; timer=setTimeout(loop,seq[s]); })();
-  }
-  document.addEventListener('click',(e)=>{
-    const b=e.target.closest('button'); if(!b) return;
-    if(b.dataset.stop!=null){ clearAnim(); return; }
-    if(b.dataset.tech==='res'){ startRes(b); }
-    if(b.dataset.tech==='t367'){ start367(b); }
-    if(b.dataset.tech==='box'){ startBox(b); }
+
+  // single click listener for all Start/Stop buttons in the techniques area
+  document.addEventListener('click', (e) => {
+    const b = e.target.closest('button');
+    if(!b) return;
+    // stop button if it has data-stop attribute
+    if(b.dataset.stop !== undefined){
+      stopTechnique(b);
+      return;
+    }
+
+    const tech = b.dataset.tech; // expected values: 'res', 't367', 'box'
+    if(!tech) return;
+
+    // Start handlers
+    if(tech === 'res'){
+      // optionally call old visual start handler if exists (startRes)
+      if(typeof startRes === 'function'){ startRes(b); }
+      startTechnique(tech, b);
+    } else if(tech === 't367'){
+      if(typeof start367 === 'function'){ start367(b); }
+      startTechnique(tech, b);
+    } else if(tech === 'box'){
+      if(typeof startBox === 'function'){ startBox(b); }
+      startTechnique(tech, b);
+    }
   });
+
+  // initialize UI with stored counters
+  loadCounters();
+
 })();
+
 
 // ---------- Diary ----------
 (function(){
