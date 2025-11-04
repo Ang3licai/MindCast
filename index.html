@@ -541,15 +541,41 @@ canvas{max-width:100%}
     if (phase === 'Out' || phase === 'Out 7s' || phase === 'Out 4s') ring.classList.add('exhale');
   }
 
+  function setRingTarget(tech, phase, durMs){
+    const ring = document.getElementById(CFG[tech].ring);
+    if (!ring) return;
+
+    // animate transform over the phase duration
+    ring.style.transition = `transform ${durMs}ms ease-in-out`;
+
+    const AMP = 0.18;  // how big the inhale looks (18% larger)
+    let scale = 1;
+
+    if (phase.startsWith('In')) {        // inhale: grow to max
+      scale = 1 + AMP;
+    }   else if (phase.startsWith('Hold')) { // hold: stay big
+      scale = 1 + AMP;
+    }   else if (phase.startsWith('Out')) { // exhale: go back to base
+      scale = 1;
+    }
+
+    ring.style.transform = `scale(${scale})`;
+  }
+
   function runStep(i){
     if (!active) return;
     const c = CFG[active];
-    const dur = c.seq[i];
-    const pct = i / c.seq.length;
-    setStatus(active, c.labels[i]);
-    pulseRing(active, pct);
+
+    const dur = c.seq[i];           // step duration in ms
+    const phase = c.labels[i];      // 'In', 'Hold', 'Out', etc.
+
+    setStatus(active, phase);       // updates the little text
+    setRing(active, phase);         // (your existing helper; OK to keep)
+    setRingTarget(active, phase, dur); // <-- animate ring for this phase
+
     timer = setTimeout(() => runStep((i + 1) % c.seq.length), dur);
   }
+
 
   function start(key){
     stop(false);                 // stop any previous run but don't record it
@@ -591,10 +617,15 @@ canvas{max-width:100%}
     document.getElementById(CFG[key].mins).textContent = '0';
     document.getElementById(CFG[key].sess).textContent = '0';
     setStatus(key, 'Press Start');
+
+    // ensure this ring returns to base size on reset
+    const r = document.getElementById(CFG[key].ring);
+    if (r) r.style.transform = 'scale(1)';
+
     pulseRing(key, 0);
   }
 
-  // initialize counters from storage on page load
+ // initialize counters from storage on page load
   ['res','t367','box'].forEach(k => {
     document.getElementById(CFG[k].mins).textContent = load(`mins-${k}`);
     document.getElementById(CFG[k].sess).textContent = load(`sessions-${k}`);
