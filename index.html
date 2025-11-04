@@ -44,6 +44,37 @@ canvas{max-width:100%}
 .link{color:var(--teal)}
 .welcome-bg{background:url('https://images.unsplash.com/photo-1519238263530-99bdd11df2ea?q=80&w=1600&auto=format&fit=crop') center/cover no-repeat}
 .signin-bg{background:url('https://images.unsplash.com/photo-1501004318641-b39e6451bec6?q=80&w=1600&auto=format&fit=crop') center/cover no-repeat}
+/* --- MindCast layout tweaks --- */
+.grids{
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(360px, 1fr));
+  gap: 28px;              /* space between cards */
+}
+
+.card{
+  margin: 0;              /* grid gap handles spacing now */
+  padding: 16px 18px;
+  border-radius: 14px;
+  background: rgba(0,0,0,.15);
+  backdrop-filter: blur(6px);
+  border: 1px solid rgba(255,255,255,.06);
+}
+
+/* Make the ring centered and consistent */
+.ring{
+  width: 160px; height: 160px;
+  margin: 12px auto 0 auto;
+  border: 4px solid rgba(76, 210, 200, .75);
+  border-radius: 50%;
+  transform: scale(1);
+}
+
+/* --- ring breathing animation --- */
+.ring.inhale  { animation: ringIn  var(--dur,3s) ease-in  forwards; }
+.ring.exhale  { animation: ringOut var(--dur,3s) ease-out forwards; }
+
+@keyframes ringIn  { from { transform: scale(1.00); } to { transform: scale(1.25); } }
+@keyframes ringOut { from { transform: scale(1.25); } to { transform: scale(1.00); } }
 </style>
 </head>
 <body>
@@ -494,6 +525,14 @@ canvas{max-width:100%}
     const scale = 0.95 + 0.10 * Math.abs(Math.sin(pct * Math.PI));
     ring.style.transform = `scale(${scale.toFixed(3)})`;
   }
+  
+  function setRing(tech, phase) {
+    const ring = document.getElementById(CFG[tech].ring);
+    if (!ring) return;
+    ring.classList.remove('inhale', 'exhale');
+    if (phase === 'In' || phase === 'In 3s' || phase === 'In 4s') ring.classList.add('inhale');
+    if (phase === 'Out' || phase === 'Out 7s' || phase === 'Out 4s') ring.classList.add('exhale');
+  }
 
   function runStep(i){
     if (!active) return;
@@ -510,6 +549,7 @@ canvas{max-width:100%}
     active = key;
     startedAt = Date.now();
     setStatus(key, 'Running…');
+    setRing(key, 'In');   // ✅ add this line to trigger breathing animation
     runStep(0);
   }
 
