@@ -1001,20 +1001,53 @@ const bye             = /bye|goodnight|good night|gtg|talk later/.test(text);
   );
 }
 
-  chatForm.addEventListener('submit', function (e) {
-    e.preventDefault();
+// --------- Talk to the live MindCast OpenAI backend ----------
+const CHAT_API_URL = "https://mindcast-api.onrender.com/chat";
 
-    const text = chatInput.value.trim();
-    if (!text) return;
+async function getChatReply(text) {
+  try {
+    const resp = await fetch(CHAT_API_URL, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({ message: text })
+    });
 
-    addMessage('user', text);
-    chatInput.value = '';
+    if (!resp.ok) {
+      return "Sorry, I'm having trouble responding right now. Please try again in a bit.";
+    }
 
-    setTimeout(() => {
-      const reply = basicBotReply(text);
-      addMessage('bot', reply);
-    }, 600);
-  });
+    const data = await resp.json();
+    return data.reply || "I'm not sure how to answer that, but I'm here with you.";
+  } catch (err) {
+    console.error("Chat error:", err);
+    return "Hmm, something went wrong reaching the AI. Check your connection and try again.";
+  }
+}
+
+  chatForm.addEventListener('submit', async function (e) {
+  e.preventDefault();
+
+  const text = chatInput.value.trim();
+  if (!text) return;
+
+  // show what the user typed
+  addMessage('user', text);
+  chatInput.value = '';
+
+  // temporary “thinking…” message
+  addMessage('bot', "Thinking about what you said...");
+
+  // ask the backend (OpenAI) for a reply
+  const reply = await getChatReply(text);
+
+  // show the real AI answer
+  addMessage('bot', reply);
+
+  // scroll to bottom
+  chatWindow.scrollTop = chatWindow.scrollHeight;
+}); 
 })();
 </script>
 
