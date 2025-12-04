@@ -1,0 +1,1055 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MindCast v5.7.5 — Stress Forecasting Companion</title>
+<meta name="color-scheme" content="dark">
+
+<script>
+  const API_BASE = "https://mindcast-api.onrender.com"; // connects your HTML to your backend
+</script>
+
+<style>
+:root{ --bg:#0b1324; --panel:#111a2f; --panel2:#0f172a; --text:#e5e7eb; --muted:#94a3b8; --teal:#14b8a6; --rose:#f43f5e; --amber:#f59e0b; --green:#22c55e; }
+*{box-sizing:border-box} html,body{height:100%} body{margin:0;font-family:ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Ubuntu;background:var(--bg);color:var(--text)}
+a{color:inherit;text-decoration:none} a:hover{color:var(--teal)}
+.container{max-width:1080px;margin:0 auto;padding:0 16px}
+header{position:sticky;top:0;background:rgba(15,23,42,.6);backdrop-filter:blur(8px);border-bottom:1px solid #0b1222;z-index:5}
+.header-row{display:flex;align-items:center;justify-content:space-between;padding:12px 0}
+.nav{display:flex;gap:22px;color:#94a3b8;font-size:14px}
+.btn,.chip{border:1px solid #334155;background:transparent;color:var(--text);padding:10px 14px;border-radius:10px;cursor:pointer}
+.btn.primary{background:var(--teal);border-color:var(--teal);color:white}
+.btn.danger{border-color:#7f1d1d;color:#fecaca}
+.btn.active{background:rgba(20,184,166,.15);border-color:#1f776f}
+.btn.running{background:rgba(20,184,166,.25);border-color:#14b8a6}
+.card{border:1px solid #0f172a;background:rgba(15,23,42,.5);border-radius:16px;padding:16px}
+.hero{border-radius:16px;overflow:hidden;position:relative;background:#0d1426}
+.hero .overlay{position:absolute;inset:0;background:linear-gradient(180deg, rgba(2,6,23,.55), rgba(2,6,23,.7))}
+.hero .inner{position:relative;padding:44px}
+h1{font-size:40px;margin:12px 0 6px} h2{font-size:28px;margin:0 0 12px} h3{font-size:18px;margin:0 0 8px}
+.small{font-size:12px;color:var(--muted)} .muted{color:var(--muted)}
+.row{display:grid;grid-template-columns:1fr 1fr;gap:16px} @media(max-width:860px){.row{grid-template-columns:1fr}}
+.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:16px} @media(max-width:860px){.grid3{grid-template-columns:1fr}}
+.input, select, textarea{background:transparent;border:1px solid #334155;color:var(--text);padding:12px;border-radius:10px;width:100%}
+.input::placeholder, textarea::placeholder{color:#8093ad}
+footer{border-top:1px solid #0b1222;margin-top:40px;padding:18px 0;text-align:center;color:#9aa7bd;font-size:14px}
+.page{display:none}.page.active{display:block}
+.badge{display:inline-flex;align-items:center;gap:6px;border:1px solid #274b4a;background:rgba(20,184,166,.1);color:#9be5da;padding:6px 10px;border-radius:999px;font-size:12px}
+canvas{max-width:100%}
+.ring{width:140px;height:140px;border-radius:50%;border:6px solid rgba(20,184,166,.5);margin:12px auto;transition:transform 6s ease-in-out}
+.cal{display:grid;grid-template-columns:repeat(7,1fr);gap:8px}
+.cal .cell{height:52px;border:1px solid #26324a;border-radius:10px;position:relative}
+.cal .dot{width:10px;height:10px;border-radius:999px;position:absolute;right:6px;bottom:6px;box-shadow:0 0 0 2px #0f172a}
+.link{color:var(--teal)}
+.welcome-bg{background:url('https://images.unsplash.com/photo-1519238263530-99bdd11df2ea?q=80&w=1600&auto=format&fit=crop') center/cover no-repeat}
+.signin-bg{background:url('https://images.unsplash.com/photo-1501004318641-b39e6451bec6?q=80&w=1600&auto=format&fit=crop') center/cover no-repeat}
+/* --- MindCast layout tweaks --- */
+.grids{
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(360px, 1fr));
+  gap: 28px;              /* space between cards */
+}
+
+.card{
+  margin: 0;              /* grid gap handles spacing now */
+  padding: 16px 18px;
+  border-radius: 14px;
+  background: rgba(0,0,0,.15);
+  backdrop-filter: blur(6px);
+  border: 1px solid rgba(255,255,255,.06);
+}
+
+/* Make the ring centered and consistent */
+.ring{
+  width:160px; height:160px;
+  margin:12px auto 0;
+  border:4px solid rgba(76,210,200,.75);
+  border-radius:50%;
+  /* smooth in/out and always a defined base */
+  transform: scale(1);
+  transition: transform 320ms ease-in-out;
+}
+
+/* --- ring breathing animation --- */
+.ring.inhale  { animation: ringIn  var(--dur,3s) ease-in  forwards; }
+.ring.exhale  { animation: ringOut var(--dur,3s) ease-out forwards; }
+
+@keyframes ringIn  { from { transform: scale(1.00); } to { transform: scale(1.25); } }
+@keyframes ringOut { from { transform: scale(1.25); } to { transform: scale(1.00); } }
+</style>
+</head>
+<body>
+<header>
+  <div class="container header-row">
+    <a href="#welcome" class="brand" style="display:flex;align-items:center;gap:10px;font-weight:700;font-size:18px">🌿 MindCast</a>
+    <nav class="nav">
+      <a href="#dashboard">Dashboard</a>
+      <a href="#techniques">Techniques</a>
+      <a href="#diary">Diary</a>
+      <a href="#therapists">Therapists</a>
+      <a href="#chatbot">AI Chat</a>
+      <a href="#notifications">Notifications</a>
+      <a href="#settings">Settings</a>
+      <a href="#support">Support</a>
+    </nav>
+    <div class="auth">
+      <a class="btn" href="#signin">Sign in</a>
+    </div>
+  </div>
+</header>
+
+<main class="container" style="padding:28px 0 40px">
+
+  <!-- WELCOME -->
+  <section id="welcome" class="page active">
+    <div class="hero welcome-bg">
+      <div class="overlay"></div>
+      <div class="inner" style="position:relative;z-index:1;max-width:680px">
+        <span class="badge">🌿 MindCast</span>
+        <h1>Detect & forecast stress.<br><span style="color:var(--teal)">Act before it spikes.</span></h1>
+        <p class="muted" style="font-size:18px">Personalized insights, breathing guidance, journaling, and therapist discovery.</p>
+        <div style="margin-top:16px;display:flex;gap:12px;flex-wrap:wrap">
+          <a class="btn primary" href="#signin">Get started</a>
+          <a class="btn" href="#learn">Learn more</a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- LEARN -->
+  <section id="learn" class="page">
+    <h2>How MindCast Helps</h2>
+    <div class="card" style="line-height:1.6">
+      <p><b>What is a stress forecast?</b> A short-term look at your likely stress level (Low / Moderate / High) for the next 24 hours, based on your recent check-ins.</p>
+      <p><b>What you get:</b> a simple dashboard for “now” + 1-day outlook, a breathing coach, a private journal with a mood calendar, gentle reminders, and a way to discover therapists.</p>
+      <p><b>Why it matters:</b> Seeing a rise ahead helps you act early—hydrate, breathe, take a short walk, or wind down for better sleep.</p>
+      <p><b>Your privacy:</b> Entries and settings are saved only on your device.</p>
+    </div>
+  </section>
+
+  <!-- SIGN IN -->
+  <section id="signin" class="page">
+    <div class="hero signin-bg" style="margin-bottom:12px"><div class="overlay"></div><div class="inner"><h2>Welcome back</h2><p class="muted">Sign in to continue your journey.</p></div></div>
+    <div style="max-width:420px">
+      <form id="signinForm" class="card">
+        <input class="input" type="email" placeholder="Email" required style="margin-bottom:8px">
+        <input class="input" type="password" placeholder="Password" required style="margin-bottom:8px">
+        <button class="btn primary" type="submit" style="width:100%">Sign in</button>
+        <p class="small" style="margin-top:8px"><a class="link" href="#forgot">Forgot password?</a> • <a class="link" href="#signup">No account? Sign up</a></p>
+      </form>
+    </div>
+  </section>
+
+  <!-- FORGOT -->
+  <section id="forgot" class="page">
+    <div style="max-width:420px">
+      <h2>Reset your password</h2>
+      <form id="forgotForm" class="card">
+        <input class="input" type="email" placeholder="Email" required style="margin-bottom:8px">
+        <button class="btn primary" type="submit" style="width:100%">Send reset link</button>
+        <p class="small" style="margin-top:8px">Remembered it? <a class="link" href="#signin">Back to sign in</a></p>
+      </form>
+    </div>
+  </section>
+
+  <!-- SIGN UP -->
+  <section id="signup" class="page">
+    <div style="max-width:420px">
+      <h2>Create your MindCast account</h2>
+      <form id="signupForm" class="card">
+        <input class="input" id="suName" placeholder="Full name" required style="margin-bottom:8px">
+        <input class="input" id="suEmail" type="email" placeholder="Email" required style="margin-bottom:8px">
+        <input class="input" id="suPw" type="password" placeholder="Password" required style="margin-bottom:8px">
+        <button class="btn primary" type="submit" style="width:100%">Sign up</button>
+      </form>
+    </div>
+  </section>
+
+  <!-- DASHBOARD -->
+  <section id="dashboard" class="page">
+    <h2>Dashboard</h2>
+    <div class="row">
+      <div class="card" style="text-align:center">
+        <h3>Current Stress</h3>
+        <canvas id="gauge" width="240" height="140"></canvas>
+        <div class="small" id="gaugeLabel" style="margin-top:6px">50</div>
+      </div>
+      <div class="card">
+        <h3>1-Day Forecast</h3>
+        <canvas id="forecast" width="460" height="240"></canvas>
+        <p id="forecastText" class="small" style="margin-top:6px"></p>
+      </div>
+    </div>
+    <div class="row" style="margin-top:16px">
+      <div class="card">
+        <h3>Affirmation</h3>
+        <p id="aff" class="muted">You’re doing better than you think 🌿</p>
+        <div class="card" style="margin-top:10px">
+          <h3 style="margin:0 0 6px">Insight</h3>
+          <p id="insight" class="small">Consistent sleep lowered your stress today.</p>
+        </div>
+      </div>
+      <div class="card">
+        <h3>Micro-surveys</h3>
+        <div class="row">
+          <div><span class="small">Sleep hours last night</span><input id="sleep" class="input" type="number" min="0" max="12" placeholder="e.g. 7"></div>
+          <div><span class="small">Hydration today</span><select id="hydr" class="input"><option>Low</option><option selected>Moderate</option><option>High</option></select></div>
+        </div>
+        <div style="margin-top:8px"><span class="small">Mood</span>
+          <select id="mood" class="input">
+            <option>😄 Great</option><option>🙂 Good</option><option selected>😐 Okay</option><option>🙁 Low</option><option>😞 Stressed</option>
+          </select>
+
+          <!-- Predict button + status/result area -->
+<div style="margin-top:14px; display:flex; align-items:center; gap:12px;">
+  <button id="detect-btn" class="btn primary">Update Stress</button>
+  <span id="detect-status" style="opacity:.8"></span>
+</div>
+<div id="detect-result" style="margin-top:6px; font-weight:600;"></div>
+
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- TECHNIQUES -->
+<section id="techniques" class="page">
+  <h2>Techniques</h2>
+
+  <div class="grid">
+    <!-- Resonant (6 bpm) -->
+    <div class="card">
+      <h3>Resonant Breathing</h3>
+      <p class="small">≈6 breaths/min • steady rhythm</p>
+      <div id="ringRes" class="ring"></div>
+      <div id="statusRes" class="small muted">Press Start</div>
+      <div class="controls">
+        <button class="btn primary" data-tech="res">Start</button>
+        <button class="btn" data-tech="res" data-stop>Stop</button>
+        <button class="btn" data-tech="res" data-reset>Reset</button>
+      </div>
+      <div class="small progress">Minutes: <span id="mins-res">0</span> • Sessions: <span id="sessions-res">0</span></div>
+    </div>
+
+    <!-- 3-6-7 -->
+    <div class="card">
+      <h3>3-6-7 Breathing</h3>
+      <p class="small">In 3s • Hold 6s • Out 7s</p>
+      <div id="ring367" class="ring"></div>
+      <div id="status367" class="small muted">Press Start</div>
+      <div class="controls">
+        <button class="btn primary" data-tech="t367">Start</button>
+        <button class="btn" data-tech="t367" data-stop>Stop</button>
+        <button class="btn" data-tech="t367" data-reset>Reset</button>
+      </div>
+      <div class="small progress">Minutes: <span id="mins-367">0</span> • Sessions: <span id="sessions-367">0</span></div>
+    </div>
+
+    <!-- Box -->
+    <div class="card">
+      <h3>Box Breathing</h3>
+      <p class="small">In 4s • Hold 4s • Out 4s • Hold 4s</p>
+      <div id="ringBox" class="ring"></div>
+      <div id="statusBox" class="small muted">Press Start</div>
+      <div class="controls">
+        <button class="btn primary" data-tech="box">Start</button>
+        <button class="btn" data-tech="box" data-stop>Stop</button>
+        <button class="btn" data-tech="box" data-reset>Reset</button>
+      </div>
+      <div class="small progress">Minutes: <span id="mins-box">0</span> • Sessions: <span id="sessions-box">0</span></div>
+    </div>
+  </div>
+</section>
+
+  <!-- DIARY -->
+  <section id="diary" class="page">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+      <h2>Diary</h2>
+      <div style="display:flex;gap:8px">
+        <button class="btn" data-diarytab="list">List</button>
+        <button class="btn" data-diarytab="calendar">Calendar</button>
+      </div>
+    </div>
+    <div class="card">
+      <div class="row" style="align-items:center">
+        <div class="small">How do you feel right now?</div>
+        <div id="moodPick" style="display:flex;gap:8px;justify-content:flex-end">
+          <button class="btn" data-mood="1">😞</button><button class="btn" data-mood="2">🙁</button><button class="btn active" data-mood="3">😐</button><button class="btn" data-mood="4">🙂</button><button class="btn" data-mood="5">😄</button>
+        </div>
+      </div>
+      <div style="margin-top:8px;display:flex;gap:8px;flex-wrap:wrap">
+        <span class="chip prompt">What happened just before?</span>
+        <span class="chip prompt">Where do you feel it in your body?</span>
+        <span class="chip prompt">What’s one small thing that could help?</span>
+      </div>
+      <textarea id="diaryTxt" rows="4" class="input" placeholder="Write your entry…" style="margin-top:8px"></textarea>
+      <div style="margin-top:8px;display:flex;gap:8px">
+        <button id="saveEntry" class="btn primary">Save Entry</button>
+        <button id="clearEntries" class="btn">Clear All</button>
+      </div>
+    </div>
+    <ul id="diaryList" style="margin-top:12px;list-style:none;padding:0"></ul>
+    <div id="diaryCalWrap" class="card" style="margin-top:12px;display:none">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+        <b>Mood Calendar</b>
+        <div style="display:flex;gap:8px;align-items:center">
+          <button id="calPrev" class="btn">◀</button>
+          <span id="calLabel" class="chip small">Month YYYY</span>
+          <button id="calNext" class="btn">▶</button>
+        </div>
+      </div>
+      <div class="small muted" style="display:grid;grid-template-columns:repeat(7,1fr);gap:8px;margin-bottom:4px">
+        <div>Sun</div><div>Mon</div><div>Tue</div><div>Wed</div><div>Thu</div><div>Fri</div><div>Sat</div>
+      </div>
+      <div id="calGrid" class="cal"></div>
+      <p class="small muted" style="margin-top:6px">Click a dot to view that day’s entries.</p>
+    </div>
+  </section>
+
+  <!-- THERAPISTS -->
+  <section id="therapists" class="page">
+    <h2>Therapists</h2>
+    <div class="grid3">
+      <div class="card"><h3>Dr. Amara Fields</h3><p class="small">Clinical Psychologist • Mindfulness & CBT</p><p class="small" style="margin-top:6px">📍 Baltimore, MD<br>📞 <a class="link" href="tel:+14105552389">(410) 555-2389</a><br>📧 <a class="link" href="mailto:amara@mindpath.com">amara@mindpath.com</a></p><a class="btn primary" style="margin-top:8px" href="mailto:scheduling@mindcast.ai?subject=Therapist%20Consult%20Request&body=Hi%2C%20I%E2%80%99d%20like%20to%20book%20a%20consult.%20My%20best%20times%20are%20...">Book Call</a></div>
+      <div class="card"><h3>Dr. Liam Okoro</h3><p class="small">Neurobehavioral Therapist • Stress Management</p><p class="small" style="margin-top:6px">📍 New York, NY<br>📞 <a class="link" href="tel:+19175557711">(917) 555-7711</a><br>📧 <a class="link" href="mailto:liam.okoro@neurocare.com">liam.okoro@neurocare.com</a></p><a class="btn primary" style="margin-top:8px" href="mailto:scheduling@mindcast.ai?subject=Therapist%20Consult%20Request&body=Hi%2C%20I%E2%80%99d%20like%20to%20book%20a%20consult.%20My%20best%20times%20are%20...">Book Call</a></div>
+      <div class="card"><h3>Dr. Elena Ruiz</h3><p class="small">Counselor • Trauma-Informed Care</p><p class="small" style="margin-top:6px">📍 Chicago, IL<br>📞 <a class="link" href="tel:+13125554432">(312) 555-4432</a><br>📧 <a class="link" href="mailto:elena@calmspace.org">elena@calmspace.org</a></p><a class="btn primary" style="margin-top:8px" href="mailto:scheduling@mindcast.ai?subject=Therapist%20Consult%20Request&body=Hi%2C%20I%E2%80%99d%20like%20to%20book%20a%20consult.%20My%20best%20times%20are%20...">Book Call</a></div>
+    </div>
+  </section>
+
+  <!-- CHATBOT-->
+  <section id="chatbot" class="page">
+  <h2>MindCast AI Chatbot</h2>
+  <p class="small muted">
+    A stress-support chatbot that responds intelligently to how you're feeling.
+  </p>
+
+  <div id="chatWindow" class="card" style="
+    max-height: 280px;
+    overflow-y: auto;
+    padding: 1rem;
+    border-radius: 8px;
+    margin-bottom: 1rem;
+  ">
+    <div class="chat-message bot">
+      <strong>MindCast Bot:</strong> Hi, I’m here to support you. How are you feeling today?
+    </div>
+  </div>
+
+  <form id="chatForm" style="display: flex; gap: 0.5rem;">
+    <input
+      id="chatInput"
+      type="text"
+      placeholder="Type a message..."
+      class="input"
+      style="flex: 1; padding: 0.6rem;"
+      autocomplete="off"
+    />
+    <button type="submit" class="btn">Send</button>
+  </form>
+</section>
+
+  <!-- NOTIFICATIONS -->
+  <section id="notifications" class="page">
+    <h2>Notifications</h2>
+    <div class="card">
+      <p class="small muted" style="margin-top:0">Set up <b>email</b> or <b>text</b> reminders. We’ll show you a preview of the message here.</p>
+      <div class="row" style="margin-top:8px">
+        <div>
+          <h3>Email reminders</h3>
+          <input id="notifEmail" class="input" type="email" placeholder="you@example.com" style="margin-top:6px">
+          <div style="display:flex;gap:8px;margin-top:8px">
+            <label class="small" style="display:flex;gap:6px;align-items:center"><input id="emDaily" type="checkbox"> Daily check-in</label>
+            <label class="small" style="display:flex;gap:6px;align-items:center"><input id="emEvening" type="checkbox"> Evening journal</label>
+          </div>
+          <button id="sendEmailTest" class="btn" style="margin-top:8px">Send notification</button>
+        </div>
+        <div>
+          <h3>Text reminders</h3>
+          <input id="notifPhone" class="input" type="tel" placeholder="+1 555 555 5555" style="margin-top:6px">
+          <div style="display:flex;gap:8px;margin-top:8px">
+            <label class="small" style="display:flex;gap:6px;align-items:center"><input id="smsBreath" type="checkbox"> Breathing session</label>
+            <label class="small" style="display:flex;gap:6px;align-items:center"><input id="smsWeekly" type="checkbox"> Weekly summary</label>
+          </div>
+          <button id="sendSmsTest" class="btn" style="margin-top:8px">Send notification</button>
+        </div>
+      </div>
+      <div class="card" style="margin-top:12px">
+        <b>Next reminder preview</b>
+        <p class="small muted" id="reminderPreview" style="margin-top:6px">No reminders selected yet.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- SETTINGS -->
+  <section id="settings" class="page">
+    <h2>Settings</h2>
+    <div class="card">
+      <h3>Profile</h3>
+      <div class="row">
+        <input id="setName" class="input" placeholder="Full name">
+        <input id="setEmail" class="input" type="email" placeholder="Email">
+      </div>
+      <button id="saveProfile" class="btn primary" style="margin-top:8px">Save Profile</button>
+    </div>
+    <div class="card" style="margin-top:12px">
+      <h3>Security</h3>
+      <div class="row">
+        <input id="oldPw" class="input" type="password" placeholder="Old password">
+        <div style="display:flex;gap:8px">
+          <input id="newPw" class="input" type="password" placeholder="New password">
+          <button id="changePw" class="btn primary">Change Password</button>
+        </div>
+      </div>
+    </div>
+    <div class="card" style="margin-top:12px">
+      <h3>Your Data</h3>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <button id="exportData" class="btn">Export JSON</button>
+        <button id="deleteData" class="btn danger">Delete Data</button>
+        <button id="deleteAccount" class="btn danger">Delete Account</button>
+      </div>
+      <p class="small muted" style="margin-top:6px">Data is stored locally in your browser.</p>
+    </div>
+  </section>
+
+  <!-- SUPPORT -->
+  <section id="support" class="page">
+    <h2>Support & Crisis Resources</h2>
+    <div class="card">
+      <p><b>Need help with MindCast?</b></p>
+      <ul class="small" style="margin-left:18px">
+        <li><b>FAQ:</b> How do I save my data? → It’s saved locally. Use <em>Settings → Your Data</em> to export JSON.</li>
+        <li><b>Change my password?</b> Use <em>Settings → Security</em>.</li>
+        <li><b>Reminders?</b> Set up email/SMS in <em>Notifications</em>.</li>
+      </ul>
+      <p class="small">Contact: <a class="link" href="mailto:support@mindcast.ai?subject=Support%20request">support@mindcast.ai</a></p>
+      <hr style="border-color:#1a2540">
+      <p class="small muted">If you are in crisis, contact local emergency services or a crisis hotline immediately.</p>
+      <ul class="small" style="margin-left:18px">
+        <li><b>US 988 Suicide & Crisis Lifeline:</b> Call or text <b>988</b></li>
+        <li><b>Crisis Text Line:</b> Text <b>HOME</b> to <b>741741</b> (US/Canada)</li>
+      </ul>
+    </div>
+  </section>
+
+</main>
+
+<footer>
+  <p>© 2025 MindCast — All rights reserved | <a href="#support" class="link">Support</a> | <a href="#privacy" class="link">Privacy</a></p>
+</footer>
+
+<script>
+// ---------- Router ----------
+(function(){
+  const pages = document.querySelectorAll('.page');
+  function show(id){
+    pages.forEach(p=>p.classList.remove('active'));
+    (document.getElementById(id)||document.getElementById('welcome')).classList.add('active');
+    window.scrollTo(0,0);
+  }
+  window.addEventListener('hashchange', ()=> show(location.hash.replace('#','')));
+  document.addEventListener('click', (e)=>{
+    const a = e.target.closest('a[href^="#"]');
+    if(!a) return;
+    const id=a.getAttribute('href').slice(1);
+    e.preventDefault();
+    if(location.hash.slice(1)===id){ show(id); } else { location.hash = id; }
+  });
+  show(location.hash.replace('#',''));
+})();
+
+// ---------- Auth (demo) ----------
+(function(){
+  const nav = document.querySelector('.nav'), auth = document.querySelector('.auth');
+  function apply(){ const signed = localStorage.getItem('mc_signed')==='1'; nav.style.display = signed ? 'flex' : 'none'; auth.style.display = signed ? 'none' : 'flex'; }
+  apply();
+  document.getElementById('signinForm')?.addEventListener('submit', (e)=>{ e.preventDefault(); localStorage.setItem('mc_signed','1'); apply(); location.hash='#dashboard'; });
+  document.getElementById('signupForm')?.addEventListener('submit', (e)=>{ e.preventDefault(); localStorage.setItem('mc_signed','1'); localStorage.setItem('mc_profile', JSON.stringify({name:document.getElementById('suName').value, email:document.getElementById('suEmail').value})); localStorage.setItem('mc_pw', document.getElementById('suPw').value); apply(); location.hash='#dashboard'; });
+  document.getElementById('forgotForm')?.addEventListener('submit', (e)=>{ e.preventDefault(); alert('Reset link sent.'); location.hash='#signin'; });
+})();
+
+// ---------- Dashboard (Canvas gauge + tiny canvas line) ----------
+(function(){
+  const $ = (s)=>document.querySelector(s);
+  const load=(k,d)=>{ try{return JSON.parse(localStorage.getItem(k))??d}catch{return d} };
+  const save=(k,v)=>localStorage.setItem(k, JSON.stringify(v));
+
+  const affs=["Progress > Perfection.","Stillness is strength.","Breathe. You’re safe right now.","Small steps count today.","Drink water before you scroll."];
+  const affEl = $('#aff'); if(affEl) affEl.textContent = affs[Math.floor(Math.random()*affs.length)];
+
+  const sleep=$('#sleep'), hyd=$('#hydr'), mood=$('#mood');
+  const gauge=$('#gauge'), gaugeLabel=$('#gaugeLabel');
+  const fc=$('#forecast');
+
+  function drawGauge(val){
+    if(!gauge) return;
+    const c=gauge, ctx=c.getContext('2d'); const W=c.width, H=c.height;
+    ctx.clearRect(0,0,W,H);
+    const cx=W/2, cy=H-10, r=Math.min(W,H*2)-40;
+    // background arc
+    ctx.lineWidth=18; ctx.strokeStyle='#233047';
+    ctx.beginPath(); ctx.arc(cx,cy,r/2,Math.PI,2*Math.PI); ctx.stroke();
+    // value
+    const clr = val<34 ? '#22c55e' : (val<67 ? '#f59e0b' : '#ef4444');
+    ctx.strokeStyle=clr;
+    ctx.beginPath(); ctx.arc(cx,cy,r/2,Math.PI,Math.PI+Math.PI*(val/100)); ctx.stroke();
+  }
+
+  function compute(){
+    let v = load('v57_score', 50);
+    const s = parseFloat(sleep?.value||'7'); if(!isNaN(s)){ if(s>=7&&s<=8) v-=8; else if(s>=6) v-=3; else if(s<5) v+=8; else v+=2; }
+    const h = (hyd?.value||'Moderate').toLowerCase(); if(h==='high') v-=6; if(h==='low') v+=6;
+    const map={"😄 great":-10,"🙂 good":-6,"😐 okay":0,"🙁 low":6,"😞 stressed":10}; const mk=(mood?.value||'😐 Okay').toLowerCase(); v+=(map[mk]??0);
+    v=Math.max(1,Math.min(99,Math.round(v))); save('v57_score',v);
+    const hist=load('v57_hist',[]); hist.push(v); if(hist.length>32) hist.shift(); save('v57_hist',hist);
+    return v;
+  }
+
+  function drawForecast(){
+    if(!fc) return;
+    const ctx = fc.getContext('2d'); const W=fc.width, H=fc.height;
+    ctx.clearRect(0,0,W,H);
+    ctx.strokeStyle='#233047'; ctx.lineWidth=1;
+    for(let y=0;y<=4;y++){ const yy=(H-24)*y/4+12; ctx.beginPath(); ctx.moveTo(32,yy); ctx.lineTo(W-12,yy); ctx.stroke(); }
+    const hist=load('v57_hist',[50]); const last=hist[hist.length-1]||50;
+    const next=Math.max(1,Math.min(99,Math.round(last+(Math.random()*10-5))));
+    const pts=[Math.max(1,last-6),Math.max(1,last-3),Math.max(1,last-1),last,last+1,last+2,(last+next)/2,next];
+    ctx.strokeStyle='#14b8a6'; ctx.lineWidth=2; ctx.beginPath();
+    pts.forEach((v,i)=>{ const x=32+i*((W-44)/7); const y=12+(H-40)*(1-v/100); if(i===0) ctx.moveTo(x,y); else ctx.lineTo(x,y); }); ctx.stroke();
+    const fTxt=document.getElementById('forecastText'); if(fTxt) fTxt.textContent = next<34 ? "Forecast: Low stress likely tomorrow." : next<67 ? "Forecast: Moderate stress likely tomorrow." : "Forecast: High stress likely tomorrow.";
+  }
+
+  function apply(){
+    const v = compute();
+    if(gaugeLabel) gaugeLabel.textContent = v;
+    drawGauge(v); drawForecast();
+    const ins = document.getElementById('insight'); if(ins){ const trend=v<34?'lowered':(v<67?'stable':'elevated'); ins.textContent=`Your stress looks ${trend} based on sleep, hydration, and mood.`; }
+  }
+  ['input','change'].forEach(evt=>{ sleep?.addEventListener(evt,apply); hyd?.addEventListener(evt,apply); mood?.addEventListener(evt,apply); });
+  apply();
+})();
+
+// ---------- Techniques (timers + progress) ----------
+
+(function () {
+  // --- configuration for the three techniques ---
+  const CFG = {
+    res:  { seq:[5000,5000],               labels:['In','Out'],                  ring:'ringRes',  status:'statusRes',  mins:'mins-res',  sess:'sessions-res' },
+    t367: { seq:[3000,6000,7000],          labels:['In 3s','Hold 6s','Out 7s'], ring:'ring367',  status:'status367',  mins:'mins-367', sess:'sessions-367' },
+    box:  { seq:[4000,4000,4000,4000],     labels:['In','Hold','Out','Hold'],   ring:'ringBox',  status:'statusBox',  mins:'mins-box', sess:'sessions-box' }
+  };
+
+  let timer = null;
+  let startedAt = null;
+  let active = null;
+
+  // --- tiny helpers for persistent counters ---
+  const load = (k) => { try { return JSON.parse(localStorage.getItem(k) || '0'); } catch { return 0; } };
+  const save = (k,v) => localStorage.setItem(k, JSON.stringify(v));
+
+  function setStatus(key, text){
+    const el = document.getElementById(CFG[key].status);
+    if (el) el.textContent = text;
+  }
+
+  function pulseRing(key, pct){
+    // pct goes 0..1 for the current step
+    // use a half-sine so it grows then shrinks back to 1
+    // 0 -> 1.00   0.5 -> 1+amp    1 -> 1.00
+    const ring = document.getElementById(CFG[key].ring);
+    if (!ring) return;
+
+    const amp = 0.12;                     // how "big" the inhale gets (12%)
+    const scale = 1 + amp * Math.sin(pct * Math.PI);
+    ring.style.transform = `scale(${scale})`;
+  }
+
+  
+  function setRing(tech, phase) {
+    const ring = document.getElementById(CFG[tech].ring);
+    if (!ring) return;
+    ring.classList.remove('inhale', 'exhale');
+    if (phase === 'In' || phase === 'In 3s' || phase === 'In 4s') ring.classList.add('inhale');
+    if (phase === 'Out' || phase === 'Out 7s' || phase === 'Out 4s') ring.classList.add('exhale');
+  }
+
+  function setRingTarget(tech, phase, durMs){
+    const ring = document.getElementById(CFG[tech].ring);
+    if (!ring) return;
+
+    // animate transform over the phase duration
+    ring.style.transition = `transform ${durMs}ms ease-in-out`;
+
+    const AMP = 0.18;  // how big the inhale looks (18% larger)
+    let scale = 1;
+
+    if (phase.startsWith('In')) {        // inhale: grow to max
+      scale = 1 + AMP;
+    }   else if (phase.startsWith('Hold')) { // hold: stay big
+      scale = 1 + AMP;
+    }   else if (phase.startsWith('Out')) { // exhale: go back to base
+      scale = 1;
+    }
+
+    ring.style.transform = `scale(${scale})`;
+  }
+
+  function runStep(i){
+    if (!active) return;
+    const c = CFG[active];
+
+    const dur = c.seq[i];           // step duration in ms
+    const phase = c.labels[i];      // 'In', 'Hold', 'Out', etc.
+
+    setStatus(active, phase);       // updates the little text
+    setRing(active, phase);         // (your existing helper; OK to keep)
+    setRingTarget(active, phase, dur); // <-- animate ring for this phase
+
+    timer = setTimeout(() => runStep((i + 1) % c.seq.length), dur);
+  }
+
+
+  function start(key){
+    stop(false);                 // stop any previous run but don't record it
+    active = key;
+    startedAt = Date.now();
+    setStatus(key, 'Running…');
+    setRing(key, 'In');   // ✅ add this line to trigger breathing animation
+    runStep(0);
+  }
+
+  function stop(record = true){
+    if (timer){ clearTimeout(timer); timer = null; }
+    if (record && active){
+      const elapsedMs = Math.max(0, Date.now() - startedAt);
+      // Record only if > 5s to avoid accidental clicks
+      if (elapsedMs > 5000){
+        const minsKey = `mins-${active}`;
+        const sesKey  = `sessions-${active}`;
+        const totalMins = load(minsKey) + Math.round(elapsedMs / 60000);
+        const totalSes  = load(sesKey)  + 1;
+        save(minsKey, totalMins);
+        save(sesKey,  totalSes);
+        document.getElementById(CFG[active].mins).textContent  = totalMins;
+        document.getElementById(CFG[active].sess).textContent  = totalSes;
+      }
+    }
+    // reset UI
+    ['res','t367','box'].forEach(k => {
+      setStatus(k,'Press Start');
+      const r = document.getElementById(CFG[k].ring);
+      if (r) r.style.transform = 'scale(1)';
+    });
+    active = null;
+  }
+
+  function resetProgress(key){
+    save(`mins-${key}`, 0);
+    save(`sessions-${key}`, 0);
+    document.getElementById(CFG[key].mins).textContent = '0';
+    document.getElementById(CFG[key].sess).textContent = '0';
+    setStatus(key, 'Press Start');
+
+    // ensure this ring returns to base size on reset
+    const r = document.getElementById(CFG[key].ring);
+    if (r) r.style.transform = 'scale(1)';
+
+    pulseRing(key, 0);
+  }
+
+ // initialize counters from storage on page load
+  ['res','t367','box'].forEach(k => {
+    document.getElementById(CFG[k].mins).textContent = load(`mins-${k}`);
+    document.getElementById(CFG[k].sess).textContent = load(`sessions-${k}`);
+  });
+
+  // single click handler for all three cards
+  document.addEventListener('click', (e) => {
+    const b = e.target.closest('button');
+    if (!b) return;
+    const tech = b.dataset.tech; // res | t367 | box
+
+    if (b.hasAttribute('data-stop'))       return stop(true);
+    if (b.hasAttribute('data-reset'))      return resetProgress(tech);
+    if (tech)                              return start(tech);
+  });
+})();
+
+// ---------- Diary ----------
+(function(){
+  const $=s=>document.querySelector(s); const $$=s=>document.querySelectorAll(s);
+  const load=(k,d)=>{ try{return JSON.parse(localStorage.getItem(k))??d}catch{return d} };
+  const save=(k,v)=>localStorage.setItem(k,JSON.stringify(v));
+
+  let currentMood=3;
+  $$('#moodPick [data-mood]').forEach(b=> b.addEventListener('click', ()=>{ currentMood=parseInt(b.dataset.mood); $$('#moodPick [data-mood]').forEach(x=>x.classList.remove('active')); b.classList.add('active'); }));
+  $$('.prompt').forEach(ch=> ch.addEventListener('click', ()=>{ const t=$('#diaryTxt'); t.value=(t.value?t.value+'\n':'')+ch.textContent+' '; t.focus(); }));
+
+  function moodColor(m){ return ['#7f1d1d','#7c2d12','#713f12','#14532d','#0f766e'][m-1]; }
+
+  function renderList(){
+    const list=$('#diaryList'); list.innerHTML='';
+    const items=load('v57_diary',[]);
+    items.forEach((it,i)=>{
+      const li=document.createElement('li'); li.className='card'; li.style.background=moodColor(it.mood); li.style.marginBottom='8px';
+      li.innerHTML = `<div class="small">${new Date(it.ts).toLocaleString()} • Mood ${it.mood}/5</div><div style="margin-top:6px">${(it.text||'').replace(/</g,'&lt;')}</div>
+      <div style="margin-top:8px"><button data-del="${i}" class="btn">Delete</button></div>`;
+      list.appendChild(li);
+    });
+    list.querySelectorAll('[data-del]').forEach(b=> b.addEventListener('click', ()=>{ const idx=parseInt(b.getAttribute('data-del')); const arr=load('v57_diary',[]); arr.splice(idx,1); save('v57_diary',arr); renderList(); renderCal(); }));
+  }
+  renderList();
+
+  document.getElementById('saveEntry')?.addEventListener('click', ()=>{
+    const txt=$('#diaryTxt').value; if(!txt.trim()) return;
+    const arr=load('v57_diary',[]); arr.push({ts:Date.now(), mood:currentMood, text:txt}); save('v57_diary',arr);
+    $('#diaryTxt').value=''; renderList(); renderCal();
+  });
+  document.getElementById('clearEntries')?.addEventListener('click', ()=>{ if(confirm('Delete all entries?')){ localStorage.removeItem('v57_diary'); renderList(); renderCal(); } });
+
+  const wrap=$('#diaryCalWrap'); const list=$('#diaryList');
+  document.querySelectorAll('[data-diarytab]').forEach(b=> b.addEventListener('click', ()=>{
+    const tab=b.getAttribute('data-diarytab'); if(tab==='calendar'){ wrap.style.display='block'; list.style.display='none'; } else { wrap.style.display='none'; list.style.display='block'; }
+  }));
+
+  let cMonth=new Date().getMonth(), cYear=new Date().getFullYear();
+  function renderCal(){
+    const grid=$('#calGrid'), label=$('#calLabel'); if(!grid||!label) return;
+    grid.innerHTML='';
+    const first=new Date(cYear,cMonth,1), start=first.getDay(), days=new Date(cYear,cMonth+1,0).getDate();
+    label.textContent=first.toLocaleString('default',{month:'long',year:'numeric'});
+    for(let i=0;i<start;i++){ const d=document.createElement('div'); d.className='cell'; d.style.borderColor='#1f2940'; grid.appendChild(d); }
+    const items=load('v57_diary',[]), by={}; items.forEach(e=>{ const d=new Date(e.ts); const k=[d.getFullYear(),d.getMonth(),d.getDate()].join('-'); (by[k]=by[k]||[]).push(e); });
+    for(let d=1; d<=days; d++){ const cell=document.createElement('div'); cell.className='cell'; cell.innerHTML=`<div class="small" style="position:absolute;top:4px;left:6px">${d}</div>`; const k=[cYear,cMonth,d].join('-'); const arr=by[k]||[]; if(arr.length){ const avg=Math.round(arr.reduce((a,b)=>a+(b.mood||3),0)/arr.length); const dot=document.createElement('div'); dot.className='dot'; dot.style.background=['#7f1d1d','#7c2d12','#713f12','#14532d','#0f766e'][avg-1]; dot.title=`Avg mood ${avg}/5 (${arr.length} entry)`; dot.addEventListener('click', ()=>{ alert(new Date(cYear,cMonth,d).toDateString()+"\n\n"+arr.map(i=>`• (${i.mood}/5) ${i.text||''}`).join('\n')); }); cell.appendChild(dot);} grid.appendChild(cell); }
+  }
+  renderCal();
+  document.getElementById('calPrev')?.addEventListener('click', ()=>{ cMonth--; if(cMonth<0){ cMonth=11; cYear--; } renderCal(); });
+  document.getElementById('calNext')?.addEventListener('click', ()=>{ cMonth++; if(cMonth>11){ cMonth=0; cYear++; } renderCal(); });
+})();
+
+// ---------- Notifications (preview) ----------
+(function(){
+  const $=s=>document.querySelector(s);
+  const email=$('#notifEmail'), phone=$('#notifPhone');
+  function preview(){
+    const parts=[];
+    if($('#emDaily')?.checked) parts.push('Daily check-in (9:00)');
+    if($('#emEvening')?.checked) parts.push('Evening journal (20:00)');
+    if($('#smsBreath')?.checked) parts.push('Breathing session (15:00)');
+    if($('#smsWeekly')?.checked) parts.push('Weekly summary (Mon 08:00)');
+    $('#reminderPreview').textContent = parts.length? parts.join(' • ') : 'No reminders selected yet.';
+  }
+  ['emDaily','emEvening','smsBreath','smsWeekly'].forEach(id=>{
+    document.getElementById(id)?.addEventListener('change', preview);
+  });
+  $('#sendEmailTest')?.addEventListener('click', ()=>{
+    const addr=email?.value||'(no email)';
+    alert(`Notification to ${addr}:\n\nSubject: MindCast reminder\nBody: Friendly check-in — how are you feeling today?`);
+  });
+  $('#sendSmsTest')?.addEventListener('click', ()=>{
+    const num=phone?.value||'(no number)';
+    alert(`Notification to ${num}:\nMindCast: time for a 2-minute breathing reset 🌿`);
+  });
+  preview();
+})();
+  </script>
+
+  <script>
+  (function () {
+    // ----- grab the inputs and UI bits -----
+    const sleepEl  = document.getElementById('sleep');   // <input id="sleep" ...>
+    const hydEl    = document.getElementById('hydr');    // <select id="hydr">...</select>
+    const moodEl   = document.getElementById('mood');    // <select id="mood">...</select>
+    const statusEl = document.getElementById('detect-status');
+    const resultEl = document.getElementById('detect-result');
+    const btn      = document.getElementById('detect-btn');
+
+    // Fallback in case the top-of-file constant wasn't added
+    const API = (typeof API_BASE !== 'undefined') ? API_BASE : 'http://127.0.0.1:5000';
+
+    // ----- map survey answers to simple physiology (for the demo) -----
+    function surveyToPhysiology() {
+      const sleep = parseFloat(sleepEl?.value ?? '7');
+      const hyd   = (hydEl?.value ?? '').toLowerCase();
+      const mood  = (moodEl?.value ?? '').toLowerCase();
+
+      let hr = 78;       // heart rate
+      let sc = 0.45;     // skin conductance
+      let bt = 36.6;     // body temp
+
+      if (!isNaN(sleep) && sleep < 7) { hr += (7 - sleep) * 3; sc += (7 - sleep) * 0.03; }
+      if (hyd.includes('low'))  { hr += 6; sc += 0.06; }
+      if (hyd.includes('high')) { hr -= 3; sc -= 0.03; }
+      if (mood.includes('bad')) { hr += 8; sc += 0.08; }
+      if (mood.includes('good')){ hr -= 4; sc -= 0.04; }
+
+      sc = Math.max(0.2, Math.min(0.9, sc));
+      return { hr: Math.round(hr), sc: +sc.toFixed(2), bt };
+    }
+
+    // ----- click handler for the new button -----
+    btn?.addEventListener('click', async () => {
+      statusEl.textContent = 'Analyzing…';
+      resultEl.textContent = '';
+
+      const phys = surveyToPhysiology();
+
+      try {
+        const resp = await fetch(API + '/predict', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            heart_rate: phys.hr,
+            skin_conductance: phys.sc,
+            body_temp: phys.bt
+          })
+        });
+
+        const data = await resp.json();
+        statusEl.textContent = 'Done';
+        resultEl.textContent = data.level || data.result || JSON.stringify(data);
+
+        // Optional: if you have a gauge update function, call it here:
+        // if (typeof setGauge === 'function') setGauge(resultEl.textContent);
+
+      } catch (err) {
+        statusEl.textContent = 'Error';
+        alert('Could not reach backend: ' + err);
+      }
+    });
+
+    // (Optional) auto-run prediction when survey fields change
+    ['sleep','hydr','mood'].forEach(id => {
+      const el = document.getElementById(id);
+      el?.addEventListener('change', () => btn?.click());
+    });
+  })();
+  </script>
+
+  <script>
+(function () {
+  const chatWindow = document.getElementById('chatWindow');
+  const chatForm   = document.getElementById('chatForm');
+  const chatInput  = document.getElementById('chatInput');
+
+  if (!chatWindow || !chatForm || !chatInput) return;
+
+  function addMessage(sender, text) {
+    const div = document.createElement('div');
+    div.className = 'chat-message ' + (sender === 'bot' ? 'bot' : 'user');
+    div.innerHTML = '<strong>' + (sender === 'bot' ? 'MindCast Bot' : 'You') + ':</strong> ' + text;
+    chatWindow.appendChild(div);
+    chatWindow.scrollTop = chatWindow.scrollHeight;
+  }
+
+  function basicBotReply(message) {
+  const text = (message || '').toLowerCase();
+
+  // quick helper for random choice
+  const pick = (arr) => arr[Math.floor(Math.random() * arr.length)];
+
+  // --- detect general topics / moods ---
+ const isSad      = /sad|down|depressed|blue|cry|crying/.test(text);
+const isAnxious  = /anxious|anxiety|worried|nervous|panic|panicking|overthinking/.test(text);
+const isStressed = /stressed|stress|overwhelmed|burnt out|burned out|pressure/.test(text);
+const isLonely   = /lonely|alone|isolated|no one cares|nobody cares/.test(text);
+const isAngry    = /angry|mad|upset|frustrated|pissed/.test(text);
+const isTired    = /tired|exhausted|drained|no energy|fatigued/.test(text);
+const mentionsSleep   = /sleep|insomnia|can't sleep|cant sleep|rest/.test(text);
+const mentionsSchool  = /school|class|homework|assignment|project|exam|test/.test(text);
+const mentionsWork    = /work|job|manager|boss|coworker|co-worker/.test(text);
+const mentionsHelp    = /help|advice|what should i do|how do i|need guidance/.test(text);
+const saysThankYou    = /thank you|thanks|ty|appreciate you/.test(text);
+const greeting        = /hi |hey |hello|what's up|whats up|sup/.test(text);
+const bye             = /bye|goodnight|good night|gtg|talk later/.test(text);
+
+  // --- safety-ish check (very minimal, still not a therapist) ---
+  if (/kill myself|suicid|end it all|don't want to live|dont want to live/.test(text)) {
+    return (
+      "I’m really glad you told me that. 💛 I’m not a therapist, " +
+      "but when thoughts like this come up it’s important to reach real people quickly.\n\n" +
+      "• If you’re in the U.S., you can call or text **988** for the Suicide & Crisis Lifeline.\n" +
+      "• If you’re elsewhere, please reach out to your local emergency number or a crisis line.\n\n" +
+      "You deserve support and you don’t have to go through this alone. " +
+      "You can also log how you’re feeling in the Diary so you can share it with a trusted person."
+    );
+  }
+
+  // --- simple conversational stuff ---
+  if (greeting && !text.includes('sad') && !text.includes('stressed')) {
+    return pick([
+      "Hey 👋 I’m the MindCast bot. How are you feeling mentally right now?",
+      "Hi, I’m here to help you check in with your stress and emotions. What’s on your mind?",
+      "Hello 💚 what’s one feeling you’re noticing in yourself today?"
+    ]);
+  }
+
+  if (bye) {
+    return pick([
+      "Thank you for checking in with yourself today 💚 Don’t forget you can log this in the Diary.",
+      "I’m glad you shared with me. Take care of yourself and come back any time you want to check in.",
+      "Proud of you for reflecting on your stress today. Rest well and see you next time 🌙"
+    ]);
+  }
+
+  if (saysThankYou) {
+    return pick([
+      "You’re welcome 💚 I’m proud of you for talking about how you feel.",
+      "Of course. Keep being gentle with yourself—you’re doing more than you think.",
+      "Any time. You can always come back here to check in or try another breathing exercise."
+    ]);
+  }
+
+  // --- advice blocks by mood/topic ---
+
+  if (isSad || isLonely) {
+    const actions = [
+      "Do one tiny comforting thing for yourself right now: warm shower, tea, favorite snack, or stepping outside for fresh air.",
+      "Reach out to **one safe person** (friend, sibling, or therapist) and tell them honestly, ‘I’m feeling low and could use a check-in.’",
+      "Use the **Diary** page to brain-dump everything you’re holding in. You don’t have to make it pretty—just get it out of your head."
+    ];
+    const regulation = [
+      "Try **Resonant Breathing** for 2–3 minutes to calm your body while your emotions are intense.",
+      "Put a hand over your heart, take 5 slow breaths, and quietly say: ‘I’m allowed to feel what I feel, and still be kind to myself.’",
+      "Name **3 things you can see, 3 things you can touch, and 3 things you can hear** to ground yourself in the present moment."
+    ];
+    const followUps = [
+      "If you want, you can tell me: what triggered these feelings today?",
+      "What do you wish someone would say to you right now? You can type it here or write it in the Diary.",
+      "Is there anyone from your support system you could text after this chat, even just to say hi?"
+    ];
+
+    return (
+      "It sounds like you’re feeling really heavy and maybe a bit alone right now. I’m glad you didn’t keep that all inside. 💚\n\n" +
+      "Here are a few gentle things you might try:\n" +
+      "• " + pick(actions) + "\n" +
+      "• " + pick(regulation) + "\n\n" +
+      pick(followUps)
+    );
+  }
+
+  if (isAnxious || isStressed || mentionsSchool || mentionsWork) {
+    const actions = [
+      "Write down **everything** stressing you out into a quick list. Then put a star next to just **one** thing you can do today.",
+      "Take a 5-minute break away from your screen—walk, stretch, or get some water. Movement helps your nervous system settle.",
+      "Turn your phone to Do Not Disturb for 20 minutes and give your brain one focused task at a time."
+    ];
+    const breathing = [
+      "Try **3-6-7 Breathing**: In 3s, hold 6s, out 7s, for 3–5 rounds to slow your thoughts.",
+      "Use **Box Breathing**: In 4s, hold 4s, out 4s, hold 4s. Imagine your breath tracing a square.",
+      "Use **Resonant Breathing** on the Techniques page for a couple of minutes to drop your stress level a bit."
+    ];
+    const followUps = [
+      "If you’d like, tell me the **biggest** thing stressing you out right now and we can break it into smaller steps.",
+      "Would it help to plan out just the **next 24 hours** instead of thinking about everything at once?",
+      "What’s one responsibility you could postpone, delegate, or say ‘no’ to this week?"
+    ];
+
+    return (
+      "Your mind sounds like it’s in overdrive right now—totally understandable with everything you’re holding. 🌿\n\n" +
+      "Here are some regulation + planning ideas:\n" +
+      "• " + pick(breathing) + "\n" +
+      "• " + pick(actions) + "\n\n" +
+      pick(followUps)
+    );
+  }
+
+  if (isTired || mentionsSleep) {
+    return (
+      "Your body sounds really tired, and that matters just as much as your thoughts. 😴\n\n" +
+      "You might try:\n" +
+      "• Doing 2–3 minutes of **Resonant Breathing** to signal ‘it’s safe to rest’ to your nervous system.\n" +
+      "• Putting your phone across the room for a bit so you’re not scrolling while exhausted.\n" +
+      "• Writing a few lines in the **Diary** titled ‘Things I’m putting down for tonight’ and letting them go until tomorrow.\n\n" +
+      "What’s one small thing you could do tonight that would make tomorrow a tiny bit easier for you?"
+    );
+  }
+
+  if (isAngry) {
+    return (
+      "Anger is often a sign that a boundary was crossed or something felt unfair. 🔥\n\n" +
+      "You could try:\n" +
+      "• Doing **Box Breathing** a few rounds to keep your body from going into full fight-mode.\n" +
+      "• Writing an ‘uncensored’ message in the **Diary** that you never have to send, just to get the heat out.\n" +
+      "• Moving your body—walk, stretching, or even cleaning your space—to let that energy move.\n\n" +
+      "Do you know what situation or person this anger is mostly about right now?"
+    );
+  }
+
+  if (mentionsHelp) {
+    return (
+      "I’m glad you’re asking for guidance—that’s a strong, self-aware move. 💪\n\n" +
+      "For staying more stress-free, you might:\n" +
+      "• Use the **Dashboard** each day to notice patterns in your stress levels.\n" +
+      "• Practice one breathing technique from the **Techniques** page for at least 2–3 minutes.\n" +
+      "• Use the **Diary** once a day to check in with your emotions honestly.\n" +
+      "• If things feel too big to handle alone, consider reaching out to one of the therapists listed on the Therapists page.\n\n" +
+      "What area do you want the most help with right now—emotions, habits, or boundaries with other people?"
+    );
+  }
+
+  // --- default fallback ---
+  return (
+    "Thank you for sharing that with me. I’m listening. 💚\n\n" +
+    "I’m a simple AI helper, not a human therapist, but I can still support you with:\n" +
+    "• ideas to calm your body (breathing + grounding)\n" +
+    "• ways to reflect in the Diary\n" +
+    "• suggestions for handling school, work, or relationships more gently\n\n" +
+    "If you’d like, tell me whether you feel more **sad, anxious, stressed, angry, lonely, or tired** right now, " +
+    "and I’ll respond with something more specific."
+  );
+}
+
+// --------- Talk to the live MindCast OpenAI backend ----------
+const CHAT_API_URL = "https://mindcast-api.onrender.com/chat";
+
+async function getChatReply(text) {
+  try {
+    const resp = await fetch(CHAT_API_URL, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({ message: text })
+    });
+
+    if (!resp.ok) {
+      return "Sorry, I'm having trouble responding right now. Please try again in a bit.";
+    }
+
+    const data = await resp.json();
+    return data.reply || "I'm not sure how to answer that, but I'm here with you.";
+  } catch (err) {
+    console.error("Chat error:", err);
+    return "Hmm, something went wrong reaching the AI. Check your connection and try again.";
+  }
+}
+
+  chatForm.addEventListener('submit', async function (e) {
+  e.preventDefault();
+
+  const text = chatInput.value.trim();
+  if (!text) return;
+
+  // show what the user typed
+  addMessage('user', text);
+  chatInput.value = '';
+
+  // temporary “thinking…” message
+  addMessage('bot', "Thinking about what you said...");
+
+  // ask the backend (OpenAI) for a reply
+  const reply = await getChatReply(text);
+
+  // show the real AI answer
+  addMessage('bot', reply);
+
+  // scroll to bottom
+  chatWindow.scrollTop = chatWindow.scrollHeight;
+}); 
+})();
+</script>
+
+</body>
+</html>
