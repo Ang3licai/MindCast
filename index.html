@@ -844,29 +844,162 @@ canvas{max-width:100%}
   }
 
   function basicBotReply(message) {
-    const msg = message.toLowerCase();
+  const text = (message || '').toLowerCase();
 
-    if (msg.includes("anxious") || msg.includes("anxiety") || msg.includes("panic")) {
-      return "It sounds like you're feeling anxious. Try a slow breathing exercise in the Techniques tab.";
-    }
-    if (msg.includes("sad") || msg.includes("down") || msg.includes("depressed")) {
-      return "I'm sorry you’re feeling this way. It might help to write in the Diary or talk to someone you trust.";
-    }
-    if (msg.includes("tired") || msg.includes("exhausted") || msg.includes("sleep")) {
-      return "It seems like your body needs rest. Try tracking your sleep or doing a calming exercise before bed.";
-    }
-    if (msg.includes("school") || msg.includes("class") || msg.includes("assignment") || msg.includes("exam")) {
-      return "School stress can be overwhelming. Break work into small tasks and pace yourself. You’re doing more than you think.";
-    }
-    if (msg.includes("angry") || msg.includes("frustrated") || msg.includes("irritated")) {
-      return "Anger is a strong emotion. A 4-4-6 breathing session in Techniques may help calm your mind before reacting.";
-    }
-    if (msg.includes("overwhelmed") || msg.includes("too much") || msg.includes("can’t handle")) {
-      return "Feeling overwhelmed is valid. Try focusing on just one small next step and be kind to yourself about what you can do today.";
-    }
+  // quick helper for random choice
+  const pick = (arr) => arr[Math.floor(Math.random() * arr.length)];
 
-    return "Thank you for sharing. Remember you can use the Dashboard to track stress, Techniques for breathing, and the Diary to go deeper. What do you think might be contributing to how you feel?";
+  // --- detect general topics / moods ---
+ const isSad      = /sad|down|depressed|blue|cry|crying/.test(text);
+const isAnxious  = /anxious|anxiety|worried|nervous|panic|panicking|overthinking/.test(text);
+const isStressed = /stressed|stress|overwhelmed|burnt out|burned out|pressure/.test(text);
+const isLonely   = /lonely|alone|isolated|no one cares|nobody cares/.test(text);
+const isAngry    = /angry|mad|upset|frustrated|pissed/.test(text);
+const isTired    = /tired|exhausted|drained|no energy|fatigued/.test(text);
+const mentionsSleep   = /sleep|insomnia|can't sleep|cant sleep|rest/.test(text);
+const mentionsSchool  = /school|class|homework|assignment|project|exam|test/.test(text);
+const mentionsWork    = /work|job|manager|boss|coworker|co-worker/.test(text);
+const mentionsHelp    = /help|advice|what should i do|how do i|need guidance/.test(text);
+const saysThankYou    = /thank you|thanks|ty|appreciate you/.test(text);
+const greeting        = /hi |hey |hello|what's up|whats up|sup/.test(text);
+const bye             = /bye|goodnight|good night|gtg|talk later/.test(text);
+
+  // --- safety-ish check (very minimal, still not a therapist) ---
+  if (/kill myself|suicid|end it all|don't want to live|dont want to live/.test(text)) {
+    return (
+      "I’m really glad you told me that. 💛 I’m not a therapist, " +
+      "but when thoughts like this come up it’s important to reach real people quickly.\n\n" +
+      "• If you’re in the U.S., you can call or text **988** for the Suicide & Crisis Lifeline.\n" +
+      "• If you’re elsewhere, please reach out to your local emergency number or a crisis line.\n\n" +
+      "You deserve support and you don’t have to go through this alone. " +
+      "You can also log how you’re feeling in the Diary so you can share it with a trusted person."
+    );
   }
+
+  // --- simple conversational stuff ---
+  if (greeting && !text.includes('sad') && !text.includes('stressed')) {
+    return pick([
+      "Hey 👋 I’m the MindCast bot. How are you feeling mentally right now?",
+      "Hi, I’m here to help you check in with your stress and emotions. What’s on your mind?",
+      "Hello 💚 what’s one feeling you’re noticing in yourself today?"
+    ]);
+  }
+
+  if (bye) {
+    return pick([
+      "Thank you for checking in with yourself today 💚 Don’t forget you can log this in the Diary.",
+      "I’m glad you shared with me. Take care of yourself and come back any time you want to check in.",
+      "Proud of you for reflecting on your stress today. Rest well and see you next time 🌙"
+    ]);
+  }
+
+  if (saysThankYou) {
+    return pick([
+      "You’re welcome 💚 I’m proud of you for talking about how you feel.",
+      "Of course. Keep being gentle with yourself—you’re doing more than you think.",
+      "Any time. You can always come back here to check in or try another breathing exercise."
+    ]);
+  }
+
+  // --- advice blocks by mood/topic ---
+
+  if (isSad || isLonely) {
+    const actions = [
+      "Do one tiny comforting thing for yourself right now: warm shower, tea, favorite snack, or stepping outside for fresh air.",
+      "Reach out to **one safe person** (friend, sibling, or therapist) and tell them honestly, ‘I’m feeling low and could use a check-in.’",
+      "Use the **Diary** page to brain-dump everything you’re holding in. You don’t have to make it pretty—just get it out of your head."
+    ];
+    const regulation = [
+      "Try **Resonant Breathing** for 2–3 minutes to calm your body while your emotions are intense.",
+      "Put a hand over your heart, take 5 slow breaths, and quietly say: ‘I’m allowed to feel what I feel, and still be kind to myself.’",
+      "Name **3 things you can see, 3 things you can touch, and 3 things you can hear** to ground yourself in the present moment."
+    ];
+    const followUps = [
+      "If you want, you can tell me: what triggered these feelings today?",
+      "What do you wish someone would say to you right now? You can type it here or write it in the Diary.",
+      "Is there anyone from your support system you could text after this chat, even just to say hi?"
+    ];
+
+    return (
+      "It sounds like you’re feeling really heavy and maybe a bit alone right now. I’m glad you didn’t keep that all inside. 💚\n\n" +
+      "Here are a few gentle things you might try:\n" +
+      "• " + pick(actions) + "\n" +
+      "• " + pick(regulation) + "\n\n" +
+      pick(followUps)
+    );
+  }
+
+  if (isAnxious || isStressed || mentionsSchool || mentionsWork) {
+    const actions = [
+      "Write down **everything** stressing you out into a quick list. Then put a star next to just **one** thing you can do today.",
+      "Take a 5-minute break away from your screen—walk, stretch, or get some water. Movement helps your nervous system settle.",
+      "Turn your phone to Do Not Disturb for 20 minutes and give your brain one focused task at a time."
+    ];
+    const breathing = [
+      "Try **3-6-7 Breathing**: In 3s, hold 6s, out 7s, for 3–5 rounds to slow your thoughts.",
+      "Use **Box Breathing**: In 4s, hold 4s, out 4s, hold 4s. Imagine your breath tracing a square.",
+      "Use **Resonant Breathing** on the Techniques page for a couple of minutes to drop your stress level a bit."
+    ];
+    const followUps = [
+      "If you’d like, tell me the **biggest** thing stressing you out right now and we can break it into smaller steps.",
+      "Would it help to plan out just the **next 24 hours** instead of thinking about everything at once?",
+      "What’s one responsibility you could postpone, delegate, or say ‘no’ to this week?"
+    ];
+
+    return (
+      "Your mind sounds like it’s in overdrive right now—totally understandable with everything you’re holding. 🌿\n\n" +
+      "Here are some regulation + planning ideas:\n" +
+      "• " + pick(breathing) + "\n" +
+      "• " + pick(actions) + "\n\n" +
+      pick(followUps)
+    );
+  }
+
+  if (isTired || mentionsSleep) {
+    return (
+      "Your body sounds really tired, and that matters just as much as your thoughts. 😴\n\n" +
+      "You might try:\n" +
+      "• Doing 2–3 minutes of **Resonant Breathing** to signal ‘it’s safe to rest’ to your nervous system.\n" +
+      "• Putting your phone across the room for a bit so you’re not scrolling while exhausted.\n" +
+      "• Writing a few lines in the **Diary** titled ‘Things I’m putting down for tonight’ and letting them go until tomorrow.\n\n" +
+      "What’s one small thing you could do tonight that would make tomorrow a tiny bit easier for you?"
+    );
+  }
+
+  if (isAngry) {
+    return (
+      "Anger is often a sign that a boundary was crossed or something felt unfair. 🔥\n\n" +
+      "You could try:\n" +
+      "• Doing **Box Breathing** a few rounds to keep your body from going into full fight-mode.\n" +
+      "• Writing an ‘uncensored’ message in the **Diary** that you never have to send, just to get the heat out.\n" +
+      "• Moving your body—walk, stretching, or even cleaning your space—to let that energy move.\n\n" +
+      "Do you know what situation or person this anger is mostly about right now?"
+    );
+  }
+
+  if (mentionsHelp) {
+    return (
+      "I’m glad you’re asking for guidance—that’s a strong, self-aware move. 💪\n\n" +
+      "For staying more stress-free, you might:\n" +
+      "• Use the **Dashboard** each day to notice patterns in your stress levels.\n" +
+      "• Practice one breathing technique from the **Techniques** page for at least 2–3 minutes.\n" +
+      "• Use the **Diary** once a day to check in with your emotions honestly.\n" +
+      "• If things feel too big to handle alone, consider reaching out to one of the therapists listed on the Therapists page.\n\n" +
+      "What area do you want the most help with right now—emotions, habits, or boundaries with other people?"
+    );
+  }
+
+  // --- default fallback ---
+  return (
+    "Thank you for sharing that with me. I’m listening. 💚\n\n" +
+    "I’m a simple AI helper, not a human therapist, but I can still support you with:\n" +
+    "• ideas to calm your body (breathing + grounding)\n" +
+    "• ways to reflect in the Diary\n" +
+    "• suggestions for handling school, work, or relationships more gently\n\n" +
+    "If you’d like, tell me whether you feel more **sad, anxious, stressed, angry, lonely, or tired** right now, " +
+    "and I’ll respond with something more specific."
+  );
+}
 
   chatForm.addEventListener('submit', function (e) {
     e.preventDefault();
