@@ -88,6 +88,7 @@ canvas{max-width:100%}
       <a href="#techniques">Techniques</a>
       <a href="#diary">Diary</a>
       <a href="#therapists">Therapists</a>
+      <a href="#chatbot">AI Chat</a>
       <a href="#notifications">Notifications</a>
       <a href="#settings">Settings</a>
       <a href="#support">Support</a>
@@ -315,6 +316,38 @@ canvas{max-width:100%}
       <div class="card"><h3>Dr. Elena Ruiz</h3><p class="small">Counselor • Trauma-Informed Care</p><p class="small" style="margin-top:6px">📍 Chicago, IL<br>📞 <a class="link" href="tel:+13125554432">(312) 555-4432</a><br>📧 <a class="link" href="mailto:elena@calmspace.org">elena@calmspace.org</a></p><a class="btn primary" style="margin-top:8px" href="mailto:scheduling@mindcast.ai?subject=Therapist%20Consult%20Request&body=Hi%2C%20I%E2%80%99d%20like%20to%20book%20a%20consult.%20My%20best%20times%20are%20...">Book Call</a></div>
     </div>
   </section>
+
+  <!-- CHATBOT-->
+  <section id="chatbot" class="page">
+  <h2>MindCast AI Chatbot</h2>
+  <p class="small muted">
+    A stress-support chatbot that responds intelligently to how you're feeling.
+  </p>
+
+  <div id="chatWindow" class="card" style="
+    max-height: 280px;
+    overflow-y: auto;
+    padding: 1rem;
+    border-radius: 8px;
+    margin-bottom: 1rem;
+  ">
+    <div class="chat-message bot">
+      <strong>MindCast Bot:</strong> Hi, I’m here to support you. How are you feeling today?
+    </div>
+  </div>
+
+  <form id="chatForm" style="display: flex; gap: 0.5rem;">
+    <input
+      id="chatInput"
+      type="text"
+      placeholder="Type a message..."
+      class="input"
+      style="flex: 1; padding: 0.6rem;"
+      autocomplete="off"
+    />
+    <button type="submit" class="btn">Send</button>
+  </form>
+</section>
 
   <!-- NOTIFICATIONS -->
   <section id="notifications" class="page">
@@ -793,6 +826,64 @@ canvas{max-width:100%}
     });
   })();
   </script>
+
+  <script>
+(function () {
+  const chatWindow = document.getElementById('chatWindow');
+  const chatForm   = document.getElementById('chatForm');
+  const chatInput  = document.getElementById('chatInput');
+
+  if (!chatWindow || !chatForm || !chatInput) return;
+
+  function addMessage(sender, text) {
+    const div = document.createElement('div');
+    div.className = 'chat-message ' + (sender === 'bot' ? 'bot' : 'user');
+    div.innerHTML = '<strong>' + (sender === 'bot' ? 'MindCast Bot' : 'You') + ':</strong> ' + text;
+    chatWindow.appendChild(div);
+    chatWindow.scrollTop = chatWindow.scrollHeight;
+  }
+
+  function basicBotReply(message) {
+    const msg = message.toLowerCase();
+
+    if (msg.includes("anxious") || msg.includes("anxiety") || msg.includes("panic")) {
+      return "It sounds like you're feeling anxious. Try a slow breathing exercise in the Techniques tab.";
+    }
+    if (msg.includes("sad") || msg.includes("down") || msg.includes("depressed")) {
+      return "I'm sorry you’re feeling this way. It might help to write in the Diary or talk to someone you trust.";
+    }
+    if (msg.includes("tired") || msg.includes("exhausted") || msg.includes("sleep")) {
+      return "It seems like your body needs rest. Try tracking your sleep or doing a calming exercise before bed.";
+    }
+    if (msg.includes("school") || msg.includes("class") || msg.includes("assignment") || msg.includes("exam")) {
+      return "School stress can be overwhelming. Break work into small tasks and pace yourself. You’re doing more than you think.";
+    }
+    if (msg.includes("angry") || msg.includes("frustrated") || msg.includes("irritated")) {
+      return "Anger is a strong emotion. A 4-4-6 breathing session in Techniques may help calm your mind before reacting.";
+    }
+    if (msg.includes("overwhelmed") || msg.includes("too much") || msg.includes("can’t handle")) {
+      return "Feeling overwhelmed is valid. Try focusing on just one small next step and be kind to yourself about what you can do today.";
+    }
+
+    return "Thank you for sharing. Remember you can use the Dashboard to track stress, Techniques for breathing, and the Diary to go deeper. What do you think might be contributing to how you feel?";
+  }
+
+  chatForm.addEventListener('submit', function (e) {
+    e.preventDefault();
+
+    const text = chatInput.value.trim();
+    if (!text) return;
+
+    addMessage('user', text);
+    chatInput.value = '';
+
+    setTimeout(() => {
+      const reply = basicBotReply(text);
+      addMessage('bot', reply);
+    }, 600);
+  });
+})();
+</script>
 
 </body>
 </html>
